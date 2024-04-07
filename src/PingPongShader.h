@@ -17,7 +17,7 @@ public:
     fbo.getTarget().begin();
     {
       shader.begin();
-      setupShader(shader);
+      setupShaders();
       fbo.getSource().draw(0, 0, fbo.getWidth(), fbo.getHeight());
       shader.end();
     }

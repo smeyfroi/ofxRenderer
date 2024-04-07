@@ -10,7 +10,7 @@ public:
   {}
   
 protected:
-  void setupShader(ofShader& shader) override {
+  void setupShaders() override {
     shader.setUniform4f("fadeBy", fadeBy);
   }
   

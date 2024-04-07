@@ -23,7 +23,7 @@ public:
   
   void render(const ofBaseDraws& fbo_) {
     shader.begin();
-    setupShader(shader);
+    setupShaders();
     fbo_.draw(0, 0);
     shader.end();
   }
@@ -31,7 +31,7 @@ public:
 protected:
   ofShader shader;
   
-  virtual void setupShader(ofShader& shader) {};
+  virtual void setupShaders() {};
 
   virtual std::string getVertexShader() {
     return GLSL(
