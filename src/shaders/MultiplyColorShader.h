@@ -2,10 +2,10 @@
 
 #include "Shader.h"
 
-class MultiplyShader : public Shader {
+class MultiplyColorShader : public Shader {
 
 public:
-  MultiplyShader(ofFloatColor multiplyBy_) :
+  MultiplyColorShader(ofFloatColor multiplyBy_) :
   multiplyBy { multiplyBy_ }
   {}
   
