@@ -6,22 +6,18 @@
 class OpticalFlowShader : public Shader {
 
 public:
-  OpticalFlowShader() {}
-  
   void render(float w, float h, const ofFbo& currentFrame_, ofFbo& lastFrame_) {
+    ofEnableBlendMode(OF_BLENDMODE_DISABLED);
     shader.begin();
+    setupShaders();
     shader.setUniformTexture("lastFrame", lastFrame_.getTexture(), 1);
-    shader.setUniform1f("offset", offsetParameter);
-    shader.setUniform1f("threshold", thresholdParameter);
-    shader.setUniform1f("force", forceParameter);
-    shader.setUniform1f("power", powerParameter);
     shader.setUniform2f("texSize", glm::vec2(currentFrame_.getWidth(), currentFrame_.getHeight()));
     ofSetColor(255);
     currentFrame_.draw(0, 0, w, h);
     shader.end();
   }
   
-  ofParameterGroup getParameterGroup() {
+  ofParameterGroup& getParameterGroup() {
     if (parameters.size() == 0) {
       parameters.add(offsetParameter);
       parameters.add(thresholdParameter);
@@ -32,6 +28,13 @@ public:
   }
 
 protected:
+  virtual void setupShaders() override {
+    shader.setUniform1f("offset", 3);//offsetParameter);
+    shader.setUniform1f("threshold", .1);//thresholdParameter);
+    shader.setUniform1f("force", 3);//forceParameter);
+    shader.setUniform1f("power", 1);//powerParameter);
+  }
+  
   std::string getFragmentShader() override {
     return GLSL(
                 uniform sampler2D tex0; // currentFrame
