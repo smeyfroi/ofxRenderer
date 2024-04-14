@@ -70,10 +70,6 @@ public:
 //      flowValuesFbo.getTarget().end();
 //      flowValuesFbo.swap();
       addForcesFunction();
-//      flowVelocitiesFbo.getTarget().begin();
-//      addTextureShader.render(flowVelocitiesFbo.getSource(), backgroundFbo, 0.05);
-//      flowVelocitiesFbo.getTarget().end();
-//      flowVelocitiesFbo.swap();
     }
     //  TODO: Apply forces to values
     // project
