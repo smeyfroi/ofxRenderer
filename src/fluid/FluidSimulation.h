@@ -63,7 +63,7 @@ public:
     valueJacobiShader.render(flowValuesFbo, flowValuesFbo.getSource().getTexture(), dtParameter);
     // add forces
     vorticityRenderer.render(flowVelocitiesFbo.getSource());
-    applyVorticityForceShader.render(flowVelocitiesFbo, vorticityRenderer.getFbo(), 2.0, dtParameter);
+    applyVorticityForceShader.render(flowVelocitiesFbo, vorticityRenderer.getFbo(), 1.0, dtParameter);
     if (ofGetFrameNum() > 10) {
 //      flowValuesFbo.getTarget().begin();
 //      addTextureShader.render(flowValuesFbo.getSource(), backgroundFbo, 0.000000001);
