@@ -18,7 +18,7 @@ public:
   void setup() {
     flowValuesFbo.allocate(Constants::CANVAS_WIDTH, Constants::CANVAS_HEIGHT, GL_RGBA32F);
     flowValuesFbo.getSource().begin();
-    ofClear(ofFloatColor(0.0, 0.0, 0.0));
+    ofClear(ofFloatColor(0.0, 0.0, 0.0, 0.0));
     flowValuesFbo.getSource().end();
 
     flowVelocitiesFbo.allocate(Constants::CANVAS_WIDTH, Constants::CANVAS_HEIGHT, GL_RGB32F);
