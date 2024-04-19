@@ -6,12 +6,12 @@
 
 // Manage vertex/fragment shaders, rendering them onto a drawable in some way
 class Shader {
-  
+
 public:
   Shader() {}
   virtual ~Shader() {}
-  
-  void loadShaders() {
+
+  void load() {
     bool shaderLoaded = shader.setupShaderFromSource(GL_VERTEX_SHADER, getVertexShader())
       && shader.setupShaderFromSource(GL_FRAGMENT_SHADER, getFragmentShader())
       && shader.linkProgram();
@@ -20,17 +20,33 @@ public:
       ofExit();
     }
   }
-  
-  void render(const ofBaseDraws& fbo_) {
+
+  // Basic convenience implementation
+  virtual void render(const ofBaseDraws& fbo_) {
     shader.begin();
     setupShaders();
     fbo_.draw(0, 0);
     shader.end();
   }
-  
+
+  // Basic convenience implementation
+  virtual void render(PingPongFbo& fbo_) {
+//    ofEnableBlendMode(OF_BLENDMODE_ALPHA);
+//    ofSetColor(255);
+    fbo_.getTarget().begin();
+    {
+      shader.begin();
+      setupShaders();
+      fbo_.getSource().draw(0, 0);
+      shader.end();
+    }
+    fbo_.getTarget().end();
+    fbo_.swap();
+  }
+
 protected:
   ofShader shader;
-  
+
   virtual void setupShaders() {};
 
   virtual std::string getVertexShader() {
@@ -41,7 +57,7 @@ protected:
                 }
                 );
   }
-  
+
   virtual std::string getFragmentShader() {
     return GLSL(
                 void main() {

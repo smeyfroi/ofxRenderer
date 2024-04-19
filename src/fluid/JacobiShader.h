@@ -1,8 +1,8 @@
 #pragma once
 
-#include "PingPongShader.h"
+#include "Shader.h"
 
-class JacobiShader : public PingPongShader {
+class JacobiShader : public Shader {
 
 public:
   JacobiShader(float diffusionStrength_ = 0, int iterations_ = 10) {

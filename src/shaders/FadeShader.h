@@ -1,8 +1,8 @@
 #pragma once
 
-#include "PingPongShader.h"
+#include "Shader.h"
 
-class FadeShader : public PingPongShader {
+class FadeShader : public Shader {
 
 public:
   FadeShader(ofFloatColor fadeBy_) :

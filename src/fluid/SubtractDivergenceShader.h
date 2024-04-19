@@ -1,8 +1,8 @@
 #pragma once
 
-#include "PingPongShader.h"
+#include "Shader.h"
 
-class SubtractDivergenceShader : public PingPongShader {
+class SubtractDivergenceShader : public Shader {
   
 public:
   SubtractDivergenceShader() {}

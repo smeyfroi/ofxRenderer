@@ -1,8 +1,8 @@
 #pragma once
 
-#include "PingPongShader.h"
+#include "Shader.h"
 
-class ApplyVorticityForceShader : public PingPongShader {
+class ApplyVorticityForceShader : public Shader {
   
 public:
   ApplyVorticityForceShader() {}

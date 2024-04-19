@@ -1,8 +1,8 @@
 #pragma once
 
-#include "PingPongShader.h"
+#include "Shader.h"
 
-class AdvectShader : public PingPongShader {
+class AdvectShader : public Shader {
 
 public:
   AdvectShader(float dissipation_ = 0.99) {

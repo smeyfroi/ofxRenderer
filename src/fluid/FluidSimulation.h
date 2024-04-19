@@ -26,18 +26,18 @@ public:
     ofClear(ofFloatColor(0.0, 0.0, 0.0));
     flowVelocitiesFbo.getSource().end();
 
-    valueAdvectShader.loadShaders();
-    velocityAdvectShader.loadShaders();
-    valueJacobiShader.loadShaders();
-    velocityJacobiShader.loadShaders();
+    valueAdvectShader.load();
+    velocityAdvectShader.load();
+    valueJacobiShader.load();
+    velocityJacobiShader.load();
     divergenceRenderer.allocate(Constants::CANVAS_WIDTH, Constants::CANVAS_HEIGHT);
-    divergenceRenderer.loadShaders();
+    divergenceRenderer.load();
     pressuresFbo.allocate(Constants::CANVAS_WIDTH, Constants::CANVAS_HEIGHT, GL_RGB32F);
-    pressureJacobiShader.loadShaders();
-    subtractDivergenceShader.loadShaders();
+    pressureJacobiShader.load();
+    subtractDivergenceShader.load();
     vorticityRenderer.allocate(Constants::CANVAS_WIDTH, Constants::CANVAS_HEIGHT);
-    vorticityRenderer.loadShaders();
-    applyVorticityForceShader.loadShaders();
+    vorticityRenderer.load();
+    applyVorticityForceShader.load();
     
     valueAdvectParameters = valueAdvectShader.getParameterGroup("value:");
     velocityAdvectParameters = velocityAdvectShader.getParameterGroup("velocity:");
@@ -102,8 +102,8 @@ private:
 
   PingPongFbo flowValuesFbo;
   PingPongFbo flowVelocitiesFbo;
-  AdvectShader valueAdvectShader { 0.999 };
-  AdvectShader velocityAdvectShader { 0.99 };
+  AdvectShader valueAdvectShader { 0.9995 };
+  AdvectShader velocityAdvectShader { 0.999 };
   JacobiShader valueJacobiShader { 10000000000.0 };
   JacobiShader velocityJacobiShader { 0.0 };
   DivergenceRenderer divergenceRenderer;
