@@ -21,7 +21,7 @@ public:
     fbo.end();
   }
   
-  void render(const ofBaseDraws& fbo_) {
+  void render(const ofBaseDraws& fbo_) override {
     fbo.begin();
     shader.begin();
     fbo_.draw(0, 0, fbo.getWidth(), fbo.getHeight());
