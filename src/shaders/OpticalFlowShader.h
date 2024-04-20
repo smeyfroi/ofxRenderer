@@ -22,17 +22,17 @@ public:
       parameters.add(offsetParameter);
       parameters.add(thresholdParameter);
       parameters.add(forceParameter);
-      parameters.add(powerParameter);
+//      parameters.add(powerParameter);
     }
     return parameters;
   }
 
 protected:
   virtual void setupShaders() override {
-    shader.setUniform1f("offset", 3);//offsetParameter);
-    shader.setUniform1f("threshold", .1);//thresholdParameter);
-    shader.setUniform1f("force", 3);//forceParameter);
-    shader.setUniform1f("power", 1);//powerParameter);
+    shader.setUniform1f("offset", offsetParameter);
+    shader.setUniform1f("threshold", thresholdParameter);
+    shader.setUniform1f("force", forceParameter);
+//    shader.setUniform1f("power", powerParameter);
   }
   
   std::string getFragmentShader() override {
@@ -44,8 +44,13 @@ protected:
                 uniform float offset; // distance to compare
                 uniform float threshold; // constant added to gradMag
                 uniform float force; // multiplier for flow
-                uniform float power;
+//                uniform float power;
                 
+                // https://github.com/msfeldstein/glsl-map/blob/master/index.glsl
+//                vec2 map(vec2 value, vec2 inMin, vec2 inMax, vec2 outMin, vec2 outMax) {
+//                  return outMin + (outMax - outMin) * (value - inMin) / (inMax - inMin);
+//                }
+
                 void main() {
                   vec2 xy = gl_TexCoord[0].st;
                   
@@ -54,19 +59,24 @@ protected:
                   (texture2D(lastFrame, xy+off.xy) - texture2D(lastFrame, xy-off.xy));
                   vec4 gradY = (texture2D(tex0, xy+off.yx) - texture2D(tex0, xy-off.yx)) +
                   (texture2D(lastFrame, xy+off.yx) - texture2D(lastFrame, xy-off.yx));
-                  vec4 gradMag = sqrt((gradX*gradX)+(gradY*gradY)+0.00001);
+                  vec4 gradMag = sqrt((gradX*gradX) + (gradY*gradY) + vec4(0.00001));
                   
                   vec4 diff = -1 * (texture2D(tex0, xy)-texture2D(lastFrame, xy));
                   
                   vec2 flow = vec2((diff*(gradX/gradMag)).x, (diff*(gradY/gradMag)).x);
                   flow *= force;
                   
-                  float magnitude = length(flow);
-                  magnitude = max(magnitude, threshold);
-                  magnitude -= threshold;
-                  magnitude /= (1-threshold);
-                  magnitude = pow(magnitude, power);
-                  flow = normalize(flow) * vec2(min(max(magnitude, 0), 1));
+//                  float magnitude = length(flow);
+//                  magnitude = max(magnitude, threshold);
+//                  magnitude -= threshold;
+//                  magnitude /= (1-threshold);
+//                  magnitude = pow(magnitude, power);
+//                  flow = normalize(flow) * vec2(min(max(magnitude, 0), 1));
+                  
+                  // remap [-1,1] to [0,1]
+//                  vec4 inRange = vec4(-1.0, -1.0, 1.0, 1.0);
+//                  vec4 outRange = vec4(0.0, 0.0, 1.0, 1.0);
+//                  flow = map(flow, inRange.xy, inRange.zw, outRange.xy, outRange.zw);
                   
                   gl_FragColor = vec4(flow, 0.0, 1.0);
                 }
@@ -75,8 +85,8 @@ protected:
   
 private:
   ofParameterGroup parameters { "Optical Flow" };
-  ofParameter<float> offsetParameter {"offset", 3.0, 1.0, 10.0 };
-  ofParameter<float> thresholdParameter {"threshold", 0.1, 0.0, 0.2 };
-  ofParameter<float> forceParameter {"force", 3.0, 0.1, 10.0 };
-  ofParameter<float> powerParameter {"power", 1.0, 0.1, 1.0 };
+  ofParameter<float> offsetParameter {"offset", 2.0, 1.0, 10.0 };
+  ofParameter<float> thresholdParameter {"threshold", 0.6, 0.0, 1.0 };
+  ofParameter<float> forceParameter {"force", 1.0, 0.1, 10.0 };
+//  ofParameter<float> powerParameter {"power", 1.0, 0.1, 1.0 };
 };
