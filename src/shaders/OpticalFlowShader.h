@@ -87,6 +87,6 @@ private:
   ofParameterGroup parameters { "Optical Flow" };
   ofParameter<float> offsetParameter {"offset", 2.0, 1.0, 10.0 };
   ofParameter<float> thresholdParameter {"threshold", 0.6, 0.0, 1.0 };
-  ofParameter<float> forceParameter {"force", 2.0, 0.1, 10.0 };
+  ofParameter<float> forceParameter {"force", 3.0, 0.1, 10.0 };
 //  ofParameter<float> powerParameter {"power", 1.0, 0.1, 1.0 };
 };
