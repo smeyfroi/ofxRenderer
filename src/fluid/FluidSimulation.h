@@ -94,7 +94,7 @@ public:
 private:
   ofParameterGroup parameters;
 
-  ofParameter<float> dtParameter {"dt", 0.01, 0.0001, 0.1 };
+  ofParameter<float> dtParameter {"dt", 0.015, 0.0001, 0.1 };
   ofParameterGroup valueAdvectParameters;
   ofParameterGroup velocityAdvectParameters;
   ofParameterGroup valueJacobiParameters;
@@ -103,7 +103,7 @@ private:
   PingPongFbo flowValuesFbo;
   PingPongFbo flowVelocitiesFbo;
   AdvectShader valueAdvectShader { 0.9995 };
-  AdvectShader velocityAdvectShader { 0.999 };
+  AdvectShader velocityAdvectShader { 0.9995 };
   JacobiShader valueJacobiShader { 10000000000.0 };
   JacobiShader velocityJacobiShader { 0.0 };
   DivergenceRenderer divergenceRenderer;
