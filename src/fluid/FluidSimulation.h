@@ -15,13 +15,14 @@ class FluidSimulation {
 public:
   FluidSimulation() {}
   
-  void setup() {
-    flowValuesFbo.allocate(Constants::CANVAS_WIDTH, Constants::CANVAS_HEIGHT, GL_RGBA32F);
+  void setup(glm::vec2 flowValuesSize, float flowVelocitiesScale_) {
+    flowVelocitiesScale = flowVelocitiesScale_;
+    flowValuesFbo.allocate(flowValuesSize.x, flowValuesSize.y, GL_RGBA32F);
     flowValuesFbo.getSource().begin();
     ofClear(ofFloatColor(0.0, 0.0, 0.0, 0.0));
     flowValuesFbo.getSource().end();
 
-    flowVelocitiesFbo.allocate(Constants::CANVAS_WIDTH, Constants::CANVAS_HEIGHT, GL_RGB32F);
+    flowVelocitiesFbo.allocate(flowVelocitiesScale*flowValuesSize.x, flowVelocitiesScale*flowValuesSize.y, GL_RGB32F);
     flowVelocitiesFbo.getSource().begin();
     ofClear(ofFloatColor(0.0, 0.0, 0.0));
     flowVelocitiesFbo.getSource().end();
@@ -30,12 +31,12 @@ public:
     velocityAdvectShader.load();
     valueJacobiShader.load();
     velocityJacobiShader.load();
-    divergenceRenderer.allocate(Constants::CANVAS_WIDTH, Constants::CANVAS_HEIGHT);
+    divergenceRenderer.allocate(flowVelocitiesScale*flowValuesSize.x, flowVelocitiesScale*flowValuesSize.y);
     divergenceRenderer.load();
-    pressuresFbo.allocate(Constants::CANVAS_WIDTH, Constants::CANVAS_HEIGHT, GL_RGB32F);
+    pressuresFbo.allocate(flowVelocitiesScale*flowValuesSize.x, flowVelocitiesScale*flowValuesSize.y, GL_RGB32F);
     pressureJacobiShader.load();
     subtractDivergenceShader.load();
-    vorticityRenderer.allocate(Constants::CANVAS_WIDTH, Constants::CANVAS_HEIGHT);
+    vorticityRenderer.allocate(flowVelocitiesScale*flowValuesSize.x, flowVelocitiesScale*flowValuesSize.y);
     vorticityRenderer.load();
     applyVorticityForceShader.load();
     
@@ -56,19 +57,18 @@ public:
   template<typename F>
   void update(F& addForcesFunction) {
     // advect
-    velocityAdvectShader.render(flowVelocitiesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter);
+    velocityAdvectShader.render(flowVelocitiesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter*flowVelocitiesScale);
     valueAdvectShader.render(flowValuesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter);
+
+    if (ofGetFrameNum() % 7 == 0) return;
+
     // diffuse
-    velocityJacobiShader.render(flowVelocitiesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter);
+    velocityJacobiShader.render(flowVelocitiesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter*flowVelocitiesScale);
     valueJacobiShader.render(flowValuesFbo, flowValuesFbo.getSource().getTexture(), dtParameter);
     // add forces
     vorticityRenderer.render(flowVelocitiesFbo.getSource());
-    applyVorticityForceShader.render(flowVelocitiesFbo, vorticityRenderer.getFbo(), 1.0, dtParameter);
+    applyVorticityForceShader.render(flowVelocitiesFbo, vorticityRenderer.getFbo(), 1.0, dtParameter*flowVelocitiesScale);
     if (ofGetFrameNum() > 10) {
-//      flowValuesFbo.getTarget().begin();
-//      addTextureShader.render(flowValuesFbo.getSource(), backgroundFbo, 0.000000001);
-//      flowValuesFbo.getTarget().end();
-//      flowValuesFbo.swap();
       addForcesFunction();
     }
     //  TODO: Apply forces to values
@@ -92,9 +92,11 @@ public:
   PingPongFbo& getFlowVelocitiesFbo() { return flowVelocitiesFbo; }
   
 private:
+  float flowVelocitiesScale; // calculate velocities at (e.g.) 0.5 scale of the values
+  
   ofParameterGroup parameters;
 
-  ofParameter<float> dtParameter {"dt", 0.015, 0.0001, 0.1 };
+  ofParameter<float> dtParameter {"dt", 0.012, 0.001, 0.03 };
   ofParameterGroup valueAdvectParameters;
   ofParameterGroup velocityAdvectParameters;
   ofParameterGroup valueJacobiParameters;
@@ -102,13 +104,13 @@ private:
 
   PingPongFbo flowValuesFbo;
   PingPongFbo flowVelocitiesFbo;
-  AdvectShader valueAdvectShader { 0.9995 };
+  AdvectShader valueAdvectShader { 0.998 };
   AdvectShader velocityAdvectShader { 0.9995 };
-  JacobiShader valueJacobiShader { 10000000000.0 };
-  JacobiShader velocityJacobiShader { 0.0 };
+  JacobiShader valueJacobiShader { 10000000000.0, 20 };
+  JacobiShader velocityJacobiShader { 0.0, 10 };
   DivergenceRenderer divergenceRenderer;
   PingPongFbo pressuresFbo;
-  JacobiShader pressureJacobiShader { 10000000000.0 };
+  JacobiShader pressureJacobiShader { 10000000000.0, 10 };
   SubtractDivergenceShader subtractDivergenceShader;
   VorticityRenderer vorticityRenderer;
   ApplyVorticityForceShader applyVorticityForceShader;

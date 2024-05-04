@@ -46,7 +46,8 @@ protected:
                 
                 void main() {
                   vec2 xy = gl_TexCoord[0].st;
-                  vec2 velocity = texture2D(velocities, xy).xy;
+                  vec2 velocityXY = gl_TexCoord[0].st;
+                  vec2 velocity = texture2D(velocities, velocityXY).xy;
                   vec2 fromXy= xy - dt*velocity;
                   gl_FragColor = dissipation * texture2D(tex0, fromXy);
                 }
@@ -55,5 +56,5 @@ protected:
   
 private:
   ofParameterGroup parameters { "Advection" };
-  ofParameter<float> dissipationParameter {"dissipation", 0.99, 0.0, 1.0 };
+  ofParameter<float> dissipationParameter {"dissipation", 0.995, 0.99, 1.0 };
 };

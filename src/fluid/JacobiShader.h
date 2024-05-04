@@ -71,6 +71,6 @@ protected:
 
 private:
   ofParameterGroup parameters { "Diffusion" };
-  ofParameter<float> diffusionStrengthParameter {"diffusionStrength", 0.0, 0.0, 1.0 };
-  ofParameter<int> iterationsParameter {"iterations", 10, 10, 40 };
+  ofParameter<float> diffusionStrengthParameter {"diffusionStrength", 0.005, 0.0, 0.05 };
+  ofParameter<int> iterationsParameter {"iterations", 20, 10, 40 };
 };
