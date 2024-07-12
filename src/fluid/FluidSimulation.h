@@ -104,13 +104,13 @@ private:
 
   PingPongFbo flowValuesFbo;
   PingPongFbo flowVelocitiesFbo;
-  AdvectShader valueAdvectShader { 0.998 };
-  AdvectShader velocityAdvectShader { 0.9995 };
-  JacobiShader valueJacobiShader { 10000000000.0, 20 };
+  AdvectShader valueAdvectShader { 0.997 };
+  AdvectShader velocityAdvectShader { 0.99999 };
+  JacobiShader valueJacobiShader { 10.0, 15 };
   JacobiShader velocityJacobiShader { 0.0, 10 };
   DivergenceRenderer divergenceRenderer;
   PingPongFbo pressuresFbo;
-  JacobiShader pressureJacobiShader { 10000000000.0, 10 };
+  JacobiShader pressureJacobiShader { 10.0, 10 };
   SubtractDivergenceShader subtractDivergenceShader;
   VorticityRenderer vorticityRenderer;
   ApplyVorticityForceShader applyVorticityForceShader;
