@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ofMain.h"
+#include "PingPongFbo.h"
 
 #define GLSL(shader) "#version 120\n" #shader
 
