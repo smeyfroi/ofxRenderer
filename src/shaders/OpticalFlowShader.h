@@ -17,8 +17,11 @@ public:
     shader.end();
   }
   
+  std::string getParameterGroupName() { return "Optical Flow"; }
+
   ofParameterGroup& getParameterGroup() {
     if (parameters.size() == 0) {
+      parameters.setName(getParameterGroupName());
       parameters.add(offsetParameter);
       parameters.add(thresholdParameter);
       parameters.add(forceParameter);
@@ -84,7 +87,7 @@ protected:
   }
   
 private:
-  ofParameterGroup parameters { "Optical Flow" };
+  ofParameterGroup parameters;
   ofParameter<float> offsetParameter {"offset", 2.0, 1.0, 10.0 };
   ofParameter<float> thresholdParameter {"threshold", 0.6, 0.0, 1.0 };
   ofParameter<float> forceParameter {"force", 3.0, 0.1, 10.0 };
