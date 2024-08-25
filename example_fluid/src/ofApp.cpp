@@ -1,14 +1,15 @@
 #include "ofApp.h"
 
+constexpr float SCALE = 0.5;
 
 //--------------------------------------------------------------
 void ofApp::setup(){
   ofSetVerticalSync(false);
   ofEnableAlphaBlending();
   ofDisableArbTex(); // required for texture2D to work in GLSL, makes texture coords normalized
-  ofSetFrameRate(30);
+  ofSetFrameRate(60);
 
-  fluidSimulation.setup({ofGetWindowWidth(), ofGetWindowHeight()}, 1.0); //0.75);
+  fluidSimulation.setup(ofGetWindowSize()*SCALE);
   parameters.add(fluidSimulation.getParameterGroup());
   gui.setup(parameters);
 }
@@ -17,13 +18,15 @@ void ofApp::setup(){
 void ofApp::updateFluidSimulationForces() {
   if (! ofGetMousePressed()) return;
   
+  const float BRUSH_SIZE = 20.0;
+  
   fluidSimulation.getFlowValuesFbo().getSource().begin();
   {
     ofPushView();
     ofEnableBlendMode(OF_BLENDMODE_ADD);
-    ofSetFloatColor(0.2+ofRandom(0.1), 0.05+ofRandom(0.1), 0.1+ofRandom(0.1), 0.5);
+    ofSetFloatColor(0.15+ofRandom(0.2), 0.05+ofRandom(0.1), 0.1+ofRandom(0.15), 0.7);
     ofFill();
-    ofDrawCircle(ofGetMouseX(), ofGetMouseY(), 50.0);
+    ofDrawCircle(ofGetMouseX()*SCALE, ofGetMouseY()*SCALE, BRUSH_SIZE);
     ofPopView();
   }
   fluidSimulation.getFlowValuesFbo().getSource().end();
@@ -33,10 +36,10 @@ void ofApp::updateFluidSimulationForces() {
   ofEnableBlendMode(OF_BLENDMODE_ADD);
   float dx = ofGetMouseX() - ofGetPreviousMouseX();
   float dy = ofGetMouseY() - ofGetPreviousMouseY();
-  ofSetColor(ofFloatColor(dx*0.01, dy*0.01, 0.0, 1.0));
+  ofSetColor(ofFloatColor(dx*0.005, dy*0.005, 0.0, 1.0));
 //  ofSetColor(ofFloatColor(0.005, 0.001, 0.0, 1.0));
   ofFill();
-  ofDrawCircle(ofGetMouseX(), ofGetMouseY(), 30.0);
+  ofDrawCircle(ofGetMouseX()*SCALE, ofGetMouseY()*SCALE, BRUSH_SIZE);
   //  addTextureShader.render(fluidSimulation.getFlowVelocitiesFbo().getSource(), opticalFlowFbo, 0.03);
   ofPopView();
   fluidSimulation.getFlowVelocitiesFbo().getSource().end();
@@ -44,9 +47,9 @@ void ofApp::updateFluidSimulationForces() {
   fluidSimulation.getTemperaturesFbo().getSource().begin();
   ofPushView();
   ofEnableBlendMode(OF_BLENDMODE_ADD);
-  ofSetColor(ofFloatColor(0.1, 0.0, 0.0, 1.0));
+  ofSetColor(ofFloatColor(0.5, 0.0, 0.0, 1.0));
   ofFill();
-  ofDrawCircle(ofGetMouseX(), ofGetMouseY(), 50);
+  ofDrawCircle(ofGetMouseX()*SCALE, ofGetMouseY()*SCALE, BRUSH_SIZE);
   ofPopView();
   fluidSimulation.getTemperaturesFbo().getSource().end();
 }
@@ -65,7 +68,6 @@ void ofApp::draw() {
   ofBlendMode(OF_BLENDMODE_ALPHA);
   ofSetFloatColor(1.0, 1.0, 1.0, 1.0);
   fluidSimulation.draw(0, 0, ofGetWindowWidth(), ofGetWindowHeight());
-//  fluidSimulation.getFlowVelocitiesFbo().getSource().draw(0, 0, ofGetWindowWidth(), ofGetWindowHeight());
   ofPopView();
   
   gui.draw();

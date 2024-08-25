@@ -19,15 +19,13 @@ class FluidSimulation {
 public:
   FluidSimulation() {}
   
-  void setup(glm::vec2 flowValuesSize, float flowVelocitiesScale_) {
-    flowVelocitiesScale = flowVelocitiesScale_;
-    
+  void setup(glm::vec2 flowValuesSize) {
     flowValuesFbo.allocate(flowValuesSize.x, flowValuesSize.y, GL_RGBA32F);
     flowValuesFbo.getSource().begin();
     ofClear(ofFloatColor(0.0, 0.0, 0.0, 0.0));
     flowValuesFbo.getSource().end();
 
-    flowVelocitiesFbo.allocate(flowVelocitiesScale*flowValuesSize.x, flowVelocitiesScale*flowValuesSize.y, GL_RGB32F);
+    flowVelocitiesFbo.allocate(flowValuesSize.x, flowValuesSize.y, GL_RGB32F);
     flowVelocitiesFbo.getSource().begin();
     ofClear(ofFloatColor(0.0, 0.0, 0.0, 0.0));
     flowVelocitiesFbo.getSource().end();
@@ -38,19 +36,19 @@ public:
     valueJacobiShader.load();
     velocityJacobiShader.load();
 
-    divergenceRenderer.allocate(flowVelocitiesScale*flowValuesSize.x, flowVelocitiesScale*flowValuesSize.y);
+    divergenceRenderer.allocate(flowValuesSize.x, flowValuesSize.y);
     divergenceRenderer.load();
 
-    pressuresFbo.allocate(flowVelocitiesScale*flowValuesSize.x, flowVelocitiesScale*flowValuesSize.y, GL_RGB32F);
+    pressuresFbo.allocate(flowValuesSize.x, flowValuesSize.y, GL_RGB32F);
     pressureJacobiShader.load();
 
     subtractDivergenceShader.load();
     
-    vorticityRenderer.allocate(flowVelocitiesScale*flowValuesSize.x, flowVelocitiesScale*flowValuesSize.y);
+    vorticityRenderer.allocate(flowValuesSize.x, flowValuesSize.y);
     vorticityRenderer.load();
     applyVorticityForceShader.load();
 
-    temperaturesFbo.allocate(flowVelocitiesScale*flowValuesSize.x, flowVelocitiesScale*flowValuesSize.y, GL_RGB32F);
+    temperaturesFbo.allocate(flowValuesSize.x, flowValuesSize.y, GL_RGB32F);
     temperaturesFbo.getSource().begin();
     ofClear(applyBouyancyShader.getParameterGroup().getFloat("ambientTemperature"), 1.0);
     temperaturesFbo.getSource().end();
@@ -62,6 +60,7 @@ public:
     if (parameters.size() == 0) {
       parameters.setName(getParameterGroupName());
       parameters.add(dtParameter);
+      parameters.add(vorticityParameter);
       valueAdvectParameters = valueAdvectShader.getParameterGroup("value:");
       parameters.add(valueAdvectParameters);
       velocityAdvectParameters = velocityAdvectShader.getParameterGroup("velocity:");
@@ -91,11 +90,11 @@ public:
 
     // diffuse
 //    velocityJacobiShader.render(flowVelocitiesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter, 1.0E-3, 0.25);
-//    valueJacobiShader.render(flowValuesFbo, flowValuesFbo.getSource().getTexture(), dtParameter, 1.0E-3, 0.25);
+//    valueJacobiShader.render(flowValuesFbo, flowValuesFbo.getSource().getTexture(), dtParameter, -1.0E-3, 0.25);
     
     // add forces
     vorticityRenderer.render(flowVelocitiesFbo.getSource());
-    applyVorticityForceShader.render(flowVelocitiesFbo, vorticityRenderer.getFbo(), 5.0, dtParameter);
+    applyVorticityForceShader.render(flowVelocitiesFbo, vorticityRenderer.getFbo(), vorticityParameter, dtParameter);
 
     if (ofGetFrameNum() > 10) {
       addForcesFunction();
@@ -118,8 +117,6 @@ public:
   
   
 private:
-  float flowVelocitiesScale; // calculate velocities at (e.g.) 0.5 scale of the values
-  
   ofParameterGroup parameters;
 
   ofParameter<float> dtParameter { "dt", 0.125, 0.01, 0.5 };
@@ -130,6 +127,7 @@ private:
   ofParameterGroup velocityJacobiParameters;
   ofParameterGroup applyBouyancyParameters;
   ofParameterGroup pressureJacobiParameters;
+  ofParameter<float> vorticityParameter { "vorticity", 3.0, 0.00, 5.0 };
 
   PingPongFbo flowValuesFbo;
   PingPongFbo flowVelocitiesFbo;
@@ -146,5 +144,4 @@ private:
   VorticityRenderer vorticityRenderer;
   ApplyVorticityForceShader applyVorticityForceShader;
   ApplyBouyancyShader applyBouyancyShader;
-
 };
