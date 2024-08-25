@@ -1,11 +1,10 @@
 #pragma once
 
-
 #include "ofMain.h"
-#include "ofxAddonTemplate.h"
+#include "ofxGui.h"
+#include "FluidSimulation.h"
 
-
-class ofApp: public ofBaseApp{
+class ofApp: public ofBaseApp {
 	public:
 		void setup();
 		void update();
@@ -21,4 +20,11 @@ class ofApp: public ofBaseApp{
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
 		
+private:
+  FluidSimulation fluidSimulation;
+  void updateFluidSimulationForces();
+
+  ofxPanel gui;
+  ofParameterGroup parameters;
+
 };

@@ -33,16 +33,18 @@ protected:
                   vec2 xy = gl_TexCoord[0].st;
                   vec2 off = vec2(1.0, 0.0) / texSize;
 
+                  // Needs to support obstacles https://github.com/patriciogonzalezvivo/ofxFluid/blob/master/src/ofxFluid.cpp#L113
+
                   float pN = texture2D(pressures, xy+off.yx).r;
                   float pS = texture2D(pressures, xy-off.yx).r;
                   float pE = texture2D(pressures, xy+off.xy).r;
                   float pW = texture2D(pressures, xy-off.xy).r;
-                  vec2 grad = vec2(pE - pW, pN - pS) * 0.5;
-
+                  vec2 grad = vec2(pE - pW, pN - pS) * 0.5; // TODO: add gradientScale = 1.0 / cellSize // https://github.com/patriciogonzalezvivo/ofxFluid/blob/master/src/ofxFluid.cpp#L113
+                  
                   vec2 oldV = texture2D(tex0, xy).xy;
                   vec2 newV = oldV - grad;
 
-                  gl_FragColor = vec4(newV, 0.0, 1.0);
+                  gl_FragColor.rg = newV;
                 }
                 );
   }

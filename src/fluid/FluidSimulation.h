@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ofxGui.h"
-#include "Constants.h"
 #include "PingPongFbo.h"
 #include "AdvectShader.h"
 #include "JacobiShader.h"
@@ -9,6 +8,7 @@
 #include "SubtractDivergenceShader.h"
 #include "VorticityRenderer.h"
 #include "ApplyVorticityForceShader.h"
+#include "ApplyBouyancyShader.h"
 
 class FluidSimulation {
 
@@ -17,6 +17,7 @@ public:
   
   void setup(glm::vec2 flowValuesSize, float flowVelocitiesScale_) {
     flowVelocitiesScale = flowVelocitiesScale_;
+    
     flowValuesFbo.allocate(flowValuesSize.x, flowValuesSize.y, GL_RGBA32F);
     flowValuesFbo.getSource().begin();
     ofClear(ofFloatColor(0.0, 0.0, 0.0, 0.0));
@@ -24,7 +25,7 @@ public:
 
     flowVelocitiesFbo.allocate(flowVelocitiesScale*flowValuesSize.x, flowVelocitiesScale*flowValuesSize.y, GL_RGB32F);
     flowVelocitiesFbo.getSource().begin();
-    ofClear(ofFloatColor(0.0, 0.0, 0.0));
+    ofClear(ofFloatColor(0.0, 0.0, 0.0, 0.0));
     flowVelocitiesFbo.getSource().end();
 
     valueAdvectShader.load();
@@ -39,6 +40,11 @@ public:
     vorticityRenderer.allocate(flowVelocitiesScale*flowValuesSize.x, flowVelocitiesScale*flowValuesSize.y);
     vorticityRenderer.load();
     applyVorticityForceShader.load();
+
+    temperaturesFbo.allocate(flowVelocitiesScale*flowValuesSize.x, flowVelocitiesScale*flowValuesSize.y, GL_RGB32F);
+    temperaturesFbo.getSource().begin();
+    ofClear(applyBouyancyShader.getParameterGroup().getFloat("ambientTemperature"), 1.0);
+    temperaturesFbo.getSource().end();
   }
 
   std::string getParameterGroupName() { return "Fluid Simulation"; }
@@ -51,10 +57,14 @@ public:
       parameters.add(valueAdvectParameters);
       velocityAdvectParameters = velocityAdvectShader.getParameterGroup("velocity:");
       parameters.add(velocityAdvectParameters);
+      temperatureAdvectParameters = temperaturesAdvectShader.getParameterGroup("temperature:");
+      parameters.add(temperatureAdvectParameters);
       valueJacobiParameters = valueJacobiShader.getParameterGroup("value:");
       parameters.add(valueJacobiParameters);
       velocityJacobiParameters = velocityJacobiShader.getParameterGroup("velocity:");
       parameters.add(velocityJacobiParameters);
+      applyBouyancyParameters = applyBouyancyShader.getParameterGroup();
+      parameters.add(applyBouyancyParameters);
     }
     return parameters;
   }
@@ -62,32 +72,30 @@ public:
   template<typename F>
   void update(F& addForcesFunction) {
     // advect
-    velocityAdvectShader.render(flowVelocitiesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter*flowVelocitiesScale);
+    velocityAdvectShader.render(flowVelocitiesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter);
+    temperaturesAdvectShader.render(temperaturesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter);
     valueAdvectShader.render(flowValuesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter);
-
-    if (ofGetFrameNum() % 7 == 0) return;
+    
+    applyBouyancyShader.render(flowVelocitiesFbo, temperaturesFbo, flowValuesFbo, dtParameter);
 
     // diffuse
-    velocityJacobiShader.render(flowVelocitiesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter*flowVelocitiesScale);
-    valueJacobiShader.render(flowValuesFbo, flowValuesFbo.getSource().getTexture(), dtParameter);
-    // add forces
+//    velocityJacobiShader.render(flowVelocitiesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter*flowVelocitiesScale);
+//    valueJacobiShader.render(flowValuesFbo, flowValuesFbo.getSource().getTexture(), dtParameter, 1.0E-3, 0.25);
+    
+      // add forces
     vorticityRenderer.render(flowVelocitiesFbo.getSource());
-    applyVorticityForceShader.render(flowVelocitiesFbo, vorticityRenderer.getFbo(), 1.0, dtParameter*flowVelocitiesScale);
+    applyVorticityForceShader.render(flowVelocitiesFbo, vorticityRenderer.getFbo(), 5.0, dtParameter);
+
     if (ofGetFrameNum() > 10) {
       addForcesFunction();
     }
-    //  TODO: Apply forces to values
-    // project
-    //   calc divergence of velocity
+
+    // compute
     divergenceRenderer.render(flowVelocitiesFbo.getSource());
-    //   calc pressure
     pressuresFbo.getSource().begin();
     ofClear(0, 0, 0);
     pressuresFbo.getSource().end();
-    //   TODO: in this loop, should be enforcing the boundaries for pressure
-    pressureJacobiShader.render(pressuresFbo, divergenceRenderer.getFbo().getTexture(), -1, 0.4);
-    //   TODO: enforce boundaries for velocity
-    // subtract gradient
+    pressureJacobiShader.render(pressuresFbo, divergenceRenderer.getFbo().getTexture(), dtParameter, -1.0, 0.25); // alpha should be -cellSize * cellSize
     subtractDivergenceShader.render(flowVelocitiesFbo, pressuresFbo.getSource());
   }
   
@@ -95,22 +103,28 @@ public:
 
   PingPongFbo& getFlowValuesFbo() { return flowValuesFbo; }
   PingPongFbo& getFlowVelocitiesFbo() { return flowVelocitiesFbo; }
+  PingPongFbo& getTemperaturesFbo() { return temperaturesFbo; }
+  
   
 private:
   float flowVelocitiesScale; // calculate velocities at (e.g.) 0.5 scale of the values
   
   ofParameterGroup parameters;
 
-  ofParameter<float> dtParameter { "dt", 0.012, 0.001, 0.03 };
+  ofParameter<float> dtParameter { "dt", 0.125, 0.01, 0.4 };
   ofParameterGroup valueAdvectParameters;
   ofParameterGroup velocityAdvectParameters;
+  ofParameterGroup temperatureAdvectParameters;
   ofParameterGroup valueJacobiParameters;
   ofParameterGroup velocityJacobiParameters;
+  ofParameterGroup applyBouyancyParameters;
 
   PingPongFbo flowValuesFbo;
   PingPongFbo flowVelocitiesFbo;
-  AdvectShader valueAdvectShader {0.998}; // { 0.997 };
-  AdvectShader velocityAdvectShader {0.9995}; //{ 0.99999 };
+  PingPongFbo temperaturesFbo;
+  AdvectShader valueAdvectShader;
+  AdvectShader velocityAdvectShader;
+  AdvectShader temperaturesAdvectShader;
   JacobiShader valueJacobiShader {10000000000.0, 20}; //{ 10.0, 15 };
   JacobiShader velocityJacobiShader { 0.0, 10 };
   DivergenceRenderer divergenceRenderer;
@@ -119,5 +133,6 @@ private:
   SubtractDivergenceShader subtractDivergenceShader;
   VorticityRenderer vorticityRenderer;
   ApplyVorticityForceShader applyVorticityForceShader;
+  ApplyBouyancyShader applyBouyancyShader;
 
 };

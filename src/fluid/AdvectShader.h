@@ -5,8 +5,7 @@
 class AdvectShader : public Shader {
 
 public:
-  AdvectShader(float dissipation_ = 0.99) {
-    dissipationParameter = dissipation_;
+  AdvectShader() {
   }
   
   void render(PingPongFbo& values, const ofTexture& velocities_, float dt) {
@@ -16,7 +15,7 @@ public:
     setupShaders();
     shader.setUniformTexture("velocities", velocities_, 1);
     shader.setUniform1f("dt", dt);
-    ofSetColor(255);
+//    ofSetColor(255);
     values.getSource().draw(0, 0);
     shader.end();
     values.getTarget().end();
@@ -41,14 +40,16 @@ protected:
     return GLSL(
                 uniform sampler2D tex0; // previous values
                 uniform sampler2D velocities;
+//                uniform sampler2D obstacleDensities;
                 uniform float dt;
                 uniform float dissipation;
                 
                 void main() {
                   vec2 xy = gl_TexCoord[0].st;
-                  vec2 velocityXY = gl_TexCoord[0].st;
-                  vec2 velocity = texture2D(velocities, velocityXY).xy;
+                  vec2 velocity = texture2D(velocities, xy).xy;
                   vec2 fromXy= xy - dt*velocity;
+//                  float obstacleDensity = 1.0 - texture2D(obstacleDensities, xy).x;
+//                  gl_FragColor = obstacleDensity * dissipation * texture2D(tex0, fromXy);
                   gl_FragColor = dissipation * texture2D(tex0, fromXy);
                 }
                 );
@@ -56,5 +57,5 @@ protected:
   
 private:
   ofParameterGroup parameters { "Advection" };
-  ofParameter<float> dissipationParameter {"dissipation", 0.995, 0.99, 1.0 };
+  ofParameter<float> dissipationParameter { " dissipation", 0.990, 0.995, 1.0 };
 };

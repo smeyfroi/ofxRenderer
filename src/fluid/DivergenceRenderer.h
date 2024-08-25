@@ -20,7 +20,7 @@ public:
 protected:
   std::string getFragmentShader() override {
     return GLSL(
-                uniform sampler2D tex0;
+                uniform sampler2D tex0; // velocities
                 uniform vec2 texSize;
 
                 void main(){
@@ -31,11 +31,13 @@ protected:
                   vec2 vS = texture2D(tex0, xy-off.yx).xy;
                   vec2 vE = texture2D(tex0, xy+off.xy).xy;
                   vec2 vW = texture2D(tex0, xy-off.xy).xy;
+                  
+                  // This also needs obstacle support, see https://github.com/patriciogonzalezvivo/ofxFluid/blob/master/src/ofxFluid.cpp#L161
 
-                  gl_FragColor = vec4((vE.x - vW.x + vN.y - vS.y) * 0.5, 0.0, 0.0, 1.0);
+                  gl_FragColor.r = (vE.x - vW.x + vN.y - vS.y) * 0.5; // TODO: extract HalfInverseCellSize = 0.5f/cellSize // https://github.com/patriciogonzalezvivo/ofxFluid/blob/master/src/ofxFluid.cpp#L269
                 }
                 );
   }
   
-  GLint getInternalFormat() override { return GL_RGB32F; }
+  GLint getInternalFormat() override { return GL_R16F; }
 };

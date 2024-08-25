@@ -10,6 +10,7 @@ public:
     iterationsParameter = iterations_;
   }
   
+  // TODO: sort out the params see https://github.com/patriciogonzalezvivo/ofxFluid/blob/master/src/ofxFluid.cpp#L565
   void render(PingPongFbo& x, const ofTexture& b, float dt, float alpha = 0, float rBeta = 0) {
     if (diffusionStrengthParameter == 0) return;
     ofEnableBlendMode(OF_BLENDMODE_DISABLED);
@@ -49,7 +50,7 @@ protected:
   std::string getFragmentShader() override {
     return GLSL(
                 uniform sampler2D tex0; // current values
-                uniform sampler2D b;
+                uniform sampler2D b; // divergence
                 uniform vec2 texSize;
                 uniform float alpha;
                 uniform float rBeta;
@@ -58,13 +59,16 @@ protected:
                   vec2 xy = gl_TexCoord[0].st;
                   vec2 off = vec2(1.0, 0.0) / texSize;
 
+                  // For obstacle support see https://github.com/patriciogonzalezvivo/ofxFluid/blob/master/src/ofxFluid.cpp#L75
+                  
                   vec4 pN = texture2D(tex0, xy+off.yx);
                   vec4 pS = texture2D(tex0, xy-off.yx);
                   vec4 pE = texture2D(tex0, xy+off.xy);
                   vec4 pW = texture2D(tex0, xy-off.xy);
+
                   vec4 bC = texture2D(b, xy);
                   
-                  gl_FragColor = vec4(pW + pE + pS + pN + alpha * bC) * rBeta;
+                  gl_FragColor = (pW + pE + pS + pN + alpha * bC) * rBeta;
                 }
                 );
   }
@@ -72,5 +76,5 @@ protected:
 private:
   ofParameterGroup parameters { "Diffusion" };
   ofParameter<float> diffusionStrengthParameter {"diffusionStrength", 0.005, 0.0, 0.05 };
-  ofParameter<int> iterationsParameter {"iterations", 20, 10, 40 };
+  ofParameter<int> iterationsParameter {"iterations", 40, 10, 80 };
 };

@@ -38,17 +38,24 @@ protected:
                   vec2 oldV = texture2D(tex0, xy).xy;
 
                   vec2 off = vec2(1.0, 0.0) / texSize;
-                  vec4 curlN = texture2D(curls, xy+off.yx);
-                  vec4 curlS = texture2D(curls, xy-off.yx);
-                  vec4 curlE = texture2D(curls, xy+off.xy);
-                  vec4 curlW = texture2D(curls, xy-off.xy);
+                  float curlN = abs(texture2D(curls, xy+off.yx).x);
+                  float curlS = abs(texture2D(curls, xy-off.yx).x);
+                  float curlE = abs(texture2D(curls, xy+off.xy).x);
+                  float curlW = abs(texture2D(curls, xy-off.xy).x);
+                  float curlC = texture2D(curls, xy).x;
                   
-                  vec3 vorticity = vec3(length(curlE) - length(curlW), length(curlN) - length(curlS), 0.0);
-                  vorticity = length(vorticity) > 0.0 ? normalize(vorticity) : vec3(0.0);
-                  vec3 curlC = texture2D(curls, xy).xyz;
-                  vec2 vortForce = vorticityStrength * cross(vorticity, curlC).xy * dt;
+                  vec2 dw = normalize(0.5 * vec2(curlN - curlS, curlE - curlW) + 0.000001) * vec2(-1, 1) ; // 0.5 constant changes with gridscale
                   
-                  gl_FragColor = vec4(oldV + vortForce, 0.0, 0.0);
+                  vec2 fvc = dw * curlC * dt * vorticityStrength;
+
+                  gl_FragColor = vec4(oldV + fvc, 0.0, 0.0);
+                  
+//                  vec3 vorticity = vec3(length(curlE) - length(curlW), length(curlN) - length(curlS), 0.0);
+//                  vorticity = length(vorticity) > 0.0 ? normalize(vorticity) : vec3(0.0);
+//                  vec3 curlC = texture2D(curls, xy).xyz;
+//                  vec2 vortForce = vorticityStrength * cross(vorticity, curlC).xy * dt;
+//                  
+//                  gl_FragColor = vec4(oldV + vortForce, 0.0, 0.0);
                 }
                 );
   }

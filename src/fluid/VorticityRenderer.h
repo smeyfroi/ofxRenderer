@@ -35,10 +35,10 @@ protected:
                   float dfx = vE.x - vW.x;
                   float dfy = vN.y - vS.y;
 
-                  gl_FragColor = vec4(0.0, 0.0, dfy - dfx, 0.0) * 0.5;
+                  gl_FragColor.x = 0.5 * (dfy - dfx); // 0.5 constant changes with gridscale
                 }
                 );
   }
   
-  GLint getInternalFormat() override { return GL_RGB32F; }
+  GLint getInternalFormat() override { return GL_R32F; }
 };
