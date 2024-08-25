@@ -5,24 +5,21 @@
 class AdvectShader : public Shader {
 
 public:
-  AdvectShader() {
-  }
-  
-  void render(PingPongFbo& values, const ofTexture& velocities_, float dt) {
-    ofEnableBlendMode(OF_BLENDMODE_DISABLED);
+  void render(PingPongFbo& values, const ofTexture& velocities, float dt) {
     values.getTarget().begin();
     shader.begin();
-    setupShaders();
-    shader.setUniformTexture("velocities", velocities_, 1);
-    shader.setUniform1f("dt", dt);
-//    ofSetColor(255);
-    values.getSource().draw(0, 0);
+    {
+      setupShaders();
+      shader.setUniformTexture("velocities", velocities, 1);
+      shader.setUniform1f("dt", dt);
+      values.getSource().draw(0, 0);
+    }
     shader.end();
     values.getTarget().end();
     values.swap();
   }
   
-  ofParameterGroup& getParameterGroup(std::string prefix) {
+  ofParameterGroup& getParameterGroup(const std::string& prefix) {
     if (parameters.size() == 0) {
       parameters.setName(prefix + parameters.getName());
       dissipationParameter.setName(prefix + dissipationParameter.getName());
@@ -57,5 +54,5 @@ protected:
   
 private:
   ofParameterGroup parameters { "Advection" };
-  ofParameter<float> dissipationParameter { " dissipation", 0.990, 0.995, 1.0 };
+  ofParameter<float> dissipationParameter { "dissipation", 0.990, 0.995, 1.0 };
 };

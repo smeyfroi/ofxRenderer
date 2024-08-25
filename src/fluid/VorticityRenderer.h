@@ -7,7 +7,6 @@ class VorticityRenderer : public Renderer {
 public:
   VorticityRenderer() {}
   
-  // TODO: hoist to the base class somehow
   void render(const ofBaseDraws& velocities_) override {
     fbo.begin();
     shader.begin();

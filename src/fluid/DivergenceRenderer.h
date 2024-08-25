@@ -5,14 +5,13 @@
 class DivergenceRenderer : public Renderer {
 
 public:
-  DivergenceRenderer() {}
-  
-  // TODO: hoist to the base class somehow
   void render(const ofBaseDraws& velocities_) override {
     fbo.begin();
     shader.begin();
-    shader.setUniform2f("texSize", glm::vec2(velocities_.getWidth(), velocities_.getHeight()));
-    velocities_.draw(0, 0);
+    {
+      shader.setUniform2f("texSize", glm::vec2(velocities_.getWidth(), velocities_.getHeight()));
+      velocities_.draw(0, 0);
+    }
     shader.end();
     fbo.end();
   }

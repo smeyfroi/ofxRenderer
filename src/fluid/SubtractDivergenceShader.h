@@ -5,8 +5,6 @@
 class SubtractDivergenceShader : public Shader {
   
 public:
-  SubtractDivergenceShader() {}
-
   void render(PingPongFbo& velocities_, ofFbo& pressures_) {
     ofEnableBlendMode(OF_BLENDMODE_DISABLED);
     velocities_.getTarget().begin();

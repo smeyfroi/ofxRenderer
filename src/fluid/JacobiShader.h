@@ -5,23 +5,14 @@
 class JacobiShader : public Shader {
 
 public:
-  JacobiShader(float diffusionStrength_ = 0, int iterations_ = 10) {
-    diffusionStrengthParameter = diffusionStrength_;
-    iterationsParameter = iterations_;
-  }
-  
-  // TODO: sort out the params see https://github.com/patriciogonzalezvivo/ofxFluid/blob/master/src/ofxFluid.cpp#L565
-  void render(PingPongFbo& x, const ofTexture& b, float dt, float alpha = 0, float rBeta = 0) {
-    if (diffusionStrengthParameter == 0) return;
+  void render(PingPongFbo& x, const ofTexture& b, float dt, float alpha, float rBeta) {
     ofEnableBlendMode(OF_BLENDMODE_DISABLED);
     shader.begin();
     setupShaders();
     shader.setUniformTexture("b", b, 1);
     shader.setUniform2f("texSize", glm::vec2(x.getSource().getWidth(), x.getSource().getHeight()));
-    float dk = diffusionStrengthParameter * dt;
-    shader.setUniform1f("alpha", (alpha == 0) ? 4/dk : alpha);
-    shader.setUniform1f("rBeta", (rBeta == 0) ? (1/(4/dk*(1+dk))) : rBeta);
-    ofSetColor(255);
+    shader.setUniform1f("alpha", alpha);
+    shader.setUniform1f("rBeta", rBeta);
     for (int i = 0; i < iterationsParameter; i++) {
       x.getTarget().begin();
       x.getSource().draw(0, 0);
@@ -34,8 +25,6 @@ public:
   ofParameterGroup& getParameterGroup(std::string prefix) {
     if (parameters.size() == 0) {
       parameters.setName(prefix + parameters.getName());
-      diffusionStrengthParameter.setName(prefix + diffusionStrengthParameter.getName());
-      parameters.add(diffusionStrengthParameter);
       iterationsParameter.setName(prefix + iterationsParameter.getName());
       parameters.add(iterationsParameter);
     }
@@ -43,10 +32,6 @@ public:
   }
 
 protected:
-  void setupShaders() override {
-    shader.setUniform1f("diffusionStrength", diffusionStrengthParameter);
-  }
-  
   std::string getFragmentShader() override {
     return GLSL(
                 uniform sampler2D tex0; // current values
@@ -75,6 +60,5 @@ protected:
 
 private:
   ofParameterGroup parameters { "Diffusion" };
-  ofParameter<float> diffusionStrengthParameter {"diffusionStrength", 0.005, 0.0, 0.05 };
   ofParameter<int> iterationsParameter {"iterations", 40, 10, 80 };
 };

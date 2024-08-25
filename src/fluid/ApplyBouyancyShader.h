@@ -5,9 +5,6 @@
 class ApplyBouyancyShader : public Shader {
 
 public:
-  ApplyBouyancyShader() {
-  }
-  
   void render(PingPongFbo& velocities, PingPongFbo& temperatures, PingPongFbo& values, float dt) {
     ofEnableBlendMode(OF_BLENDMODE_DISABLED);
     shader.begin();

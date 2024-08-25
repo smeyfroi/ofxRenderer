@@ -5,8 +5,6 @@
 class ApplyVorticityForceShader : public Shader {
   
 public:
-  ApplyVorticityForceShader() {}
-
   void render(PingPongFbo& velocities_, ofFbo& curls_, float vorticityStrength_, float dt_) {
     ofEnableBlendMode(OF_BLENDMODE_DISABLED);
     velocities_.getTarget().begin();

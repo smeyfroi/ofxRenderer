@@ -13,18 +13,23 @@ public:
     width = width_;
     height = height_;
     fbo.allocate(width, height, getInternalFormat());
+    clear();
   }
   
   void clear() {
     fbo.begin();
-    ofClear(getClearColor());
+    {
+      ofClear(getClearColor());
+    }
     fbo.end();
   }
   
   void render(const ofBaseDraws& fbo_) override {
     fbo.begin();
     shader.begin();
-    fbo_.draw(0, 0, fbo.getWidth(), fbo.getHeight());
+    {
+      fbo_.draw(0, 0, fbo.getWidth(), fbo.getHeight());
+    }
     shader.end();
     fbo.end();
   }
@@ -41,5 +46,5 @@ protected:
   float width, height;
   ofFbo fbo;
   virtual GLint getInternalFormat() { return GL_RGBA; }
-  virtual ofColor getClearColor() { return ofColor(0, 0, 0, 0); }
+  virtual ofColor getClearColor() { return ofFloatColor(0.0, 0.0, 0.0, 0.0); }
 };

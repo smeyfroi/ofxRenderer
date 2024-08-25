@@ -10,6 +10,10 @@
 #include "ApplyVorticityForceShader.h"
 #include "ApplyBouyancyShader.h"
 
+// NOTES:
+// - How to set up dissipation params (e.g. https://github.com/patriciogonzalezvivo/ofxFluid/blob/master/src/ofxFluid.cpp#L291)
+
+
 class FluidSimulation {
 
 public:
@@ -30,13 +34,18 @@ public:
 
     valueAdvectShader.load();
     velocityAdvectShader.load();
+    
     valueJacobiShader.load();
     velocityJacobiShader.load();
+
     divergenceRenderer.allocate(flowVelocitiesScale*flowValuesSize.x, flowVelocitiesScale*flowValuesSize.y);
     divergenceRenderer.load();
+
     pressuresFbo.allocate(flowVelocitiesScale*flowValuesSize.x, flowVelocitiesScale*flowValuesSize.y, GL_RGB32F);
     pressureJacobiShader.load();
+
     subtractDivergenceShader.load();
+    
     vorticityRenderer.allocate(flowVelocitiesScale*flowValuesSize.x, flowVelocitiesScale*flowValuesSize.y);
     vorticityRenderer.load();
     applyVorticityForceShader.load();
@@ -65,6 +74,8 @@ public:
       parameters.add(velocityJacobiParameters);
       applyBouyancyParameters = applyBouyancyShader.getParameterGroup();
       parameters.add(applyBouyancyParameters);
+      pressureJacobiParameters = pressureJacobiShader.getParameterGroup("pressure:");
+      parameters.add(pressureJacobiParameters);
     }
     return parameters;
   }
@@ -79,10 +90,10 @@ public:
     applyBouyancyShader.render(flowVelocitiesFbo, temperaturesFbo, flowValuesFbo, dtParameter);
 
     // diffuse
-//    velocityJacobiShader.render(flowVelocitiesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter*flowVelocitiesScale);
+//    velocityJacobiShader.render(flowVelocitiesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter, 1.0E-3, 0.25);
 //    valueJacobiShader.render(flowValuesFbo, flowValuesFbo.getSource().getTexture(), dtParameter, 1.0E-3, 0.25);
     
-      // add forces
+    // add forces
     vorticityRenderer.render(flowVelocitiesFbo.getSource());
     applyVorticityForceShader.render(flowVelocitiesFbo, vorticityRenderer.getFbo(), 5.0, dtParameter);
 
@@ -111,13 +122,14 @@ private:
   
   ofParameterGroup parameters;
 
-  ofParameter<float> dtParameter { "dt", 0.125, 0.01, 0.4 };
+  ofParameter<float> dtParameter { "dt", 0.125, 0.01, 0.5 };
   ofParameterGroup valueAdvectParameters;
   ofParameterGroup velocityAdvectParameters;
   ofParameterGroup temperatureAdvectParameters;
   ofParameterGroup valueJacobiParameters;
   ofParameterGroup velocityJacobiParameters;
   ofParameterGroup applyBouyancyParameters;
+  ofParameterGroup pressureJacobiParameters;
 
   PingPongFbo flowValuesFbo;
   PingPongFbo flowVelocitiesFbo;
@@ -125,11 +137,11 @@ private:
   AdvectShader valueAdvectShader;
   AdvectShader velocityAdvectShader;
   AdvectShader temperaturesAdvectShader;
-  JacobiShader valueJacobiShader {10000000000.0, 20}; //{ 10.0, 15 };
-  JacobiShader velocityJacobiShader { 0.0, 10 };
+  JacobiShader valueJacobiShader;
+  JacobiShader velocityJacobiShader;
   DivergenceRenderer divergenceRenderer;
   PingPongFbo pressuresFbo;
-  JacobiShader pressureJacobiShader {10000000000.0, 10}; // { 10.0, 10 };
+  JacobiShader pressureJacobiShader;
   SubtractDivergenceShader subtractDivergenceShader;
   VorticityRenderer vorticityRenderer;
   ApplyVorticityForceShader applyVorticityForceShader;
