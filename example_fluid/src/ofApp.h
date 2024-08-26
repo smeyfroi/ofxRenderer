@@ -22,10 +22,7 @@ class ofApp: public ofBaseApp {
 		
 private:
   FluidSimulation fluidSimulation;
-  void updateFluidSimulationForces();
 
   ofxPanel gui;
   ofParameterGroup parameters;
-
-  std::function<void()> updateForcesFn;
 };

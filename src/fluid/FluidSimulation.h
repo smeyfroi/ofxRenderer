@@ -94,8 +94,7 @@ public:
     return parameters;
   }
   
-  template<typename F>
-  void update(F& addForcesFunction) {
+  void update() {
     // advect
     velocityAdvectShader.render(flowVelocitiesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter);
     temperaturesAdvectShader.render(temperaturesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter);
@@ -110,10 +109,6 @@ public:
     // add forces
     vorticityRenderer.render(flowVelocitiesFbo.getSource());
     applyVorticityForceShader.render(flowVelocitiesFbo, vorticityRenderer.getFbo(), vorticityParameter, dtParameter);
-
-    if (ofGetFrameNum() > 10) {
-      addForcesFunction();
-    }
 
     // compute
     divergenceRenderer.render(flowVelocitiesFbo.getSource());
