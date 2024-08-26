@@ -12,6 +12,8 @@ void ofApp::setup(){
   fluidSimulation.setup(ofGetWindowSize()*SCALE);
   parameters.add(fluidSimulation.getParameterGroup());
   gui.setup(parameters);
+  
+  updateForcesFn = std::bind(&ofApp::updateFluidSimulationForces, this);
 }
 
 //--------------------------------------------------------------
@@ -20,55 +22,30 @@ void ofApp::updateFluidSimulationForces() {
   
   const float BRUSH_SIZE = 20.0;
   
-  fluidSimulation.getFlowValuesFbo().getSource().begin();
-  {
-    ofPushView();
-    ofEnableBlendMode(OF_BLENDMODE_ADD);
-    ofSetFloatColor(0.15+ofRandom(0.2), 0.05+ofRandom(0.1), 0.1+ofRandom(0.15), 0.7);
-    ofFill();
-    ofDrawCircle(ofGetMouseX()*SCALE, ofGetMouseY()*SCALE, BRUSH_SIZE);
-    ofPopView();
-  }
-  fluidSimulation.getFlowValuesFbo().getSource().end();
-
-  fluidSimulation.getFlowVelocitiesFbo().getSource().begin();
-  ofPushView();
-  ofEnableBlendMode(OF_BLENDMODE_ADD);
   float dx = ofGetMouseX() - ofGetPreviousMouseX();
   float dy = ofGetMouseY() - ofGetPreviousMouseY();
-  ofSetColor(ofFloatColor(dx*0.005, dy*0.005, 0.0, 1.0));
-//  ofSetColor(ofFloatColor(0.005, 0.001, 0.0, 1.0));
-  ofFill();
-  ofDrawCircle(ofGetMouseX()*SCALE, ofGetMouseY()*SCALE, BRUSH_SIZE);
-  //  addTextureShader.render(fluidSimulation.getFlowVelocitiesFbo().getSource(), opticalFlowFbo, 0.03);
-  ofPopView();
-  fluidSimulation.getFlowVelocitiesFbo().getSource().end();
+
+  FluidSimulation::Impulse impulse {
+    { ofGetMouseX()*SCALE, ofGetMouseY()*SCALE },
+    BRUSH_SIZE, // radius
+    { dx*0.005, dy*0.005 }, // velocity
+    0.0, // radialVelocity
+    ofFloatColor(0.3+ofRandom(0.2), 0.1+ofRandom(0.1), 0.2+ofRandom(0.15), 1.0),
+    10.0 // temperature
+  };
   
-  fluidSimulation.getTemperaturesFbo().getSource().begin();
-  ofPushView();
-  ofEnableBlendMode(OF_BLENDMODE_ADD);
-  ofSetColor(ofFloatColor(0.5, 0.0, 0.0, 1.0));
-  ofFill();
-  ofDrawCircle(ofGetMouseX()*SCALE, ofGetMouseY()*SCALE, BRUSH_SIZE);
-  ofPopView();
-  fluidSimulation.getTemperaturesFbo().getSource().end();
+  fluidSimulation.applyImpulse(impulse);
 }
 
 void ofApp::update() {
-  std::function<void()> updateForces = std::bind(&ofApp::updateFluidSimulationForces, this);
-  fluidSimulation.update(updateForces);
+  fluidSimulation.update(updateForcesFn);
 }
 
 //--------------------------------------------------------------
 void ofApp::draw() {
-  ofBlendMode(OF_BLENDMODE_DISABLED);
   ofClear(0, 255);
   
-  ofPushView();
-  ofBlendMode(OF_BLENDMODE_ALPHA);
-  ofSetFloatColor(1.0, 1.0, 1.0, 1.0);
   fluidSimulation.draw(0, 0, ofGetWindowWidth(), ofGetWindowHeight());
-  ofPopView();
   
   gui.draw();
 }

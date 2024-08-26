@@ -27,4 +27,5 @@ private:
   ofxPanel gui;
   ofParameterGroup parameters;
 
+  std::function<void()> updateForcesFn;
 };

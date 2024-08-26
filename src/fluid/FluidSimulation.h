@@ -9,16 +9,29 @@
 #include "VorticityRenderer.h"
 #include "ApplyVorticityForceShader.h"
 #include "ApplyBouyancyShader.h"
+#include "AddImpulseSpotShader.h"
+
+// https://developer.nvidia.com/gpugems/gpugems/part-vi-beyond-triangles/chapter-38-fast-fluid-dynamics-simulation-gpu
+// https://github.com/patriciogonzalezvivo/ofxFluid
+// https://github.com/moostrik/ofxFlowTools
 
 // NOTES:
 // - How to set up dissipation params (e.g. https://github.com/patriciogonzalezvivo/ofxFluid/blob/master/src/ofxFluid.cpp#L291)
 
 
 class FluidSimulation {
-
-public:
-  FluidSimulation() {}
   
+public:
+  struct Impulse {
+    glm::vec2 position;
+    float radius;
+    glm::vec2 velocity;
+    float radialVelocity; // applies if velocity == nullptr
+    ofFloatColor color;
+    float colorDensity; // resultant color is `color * colorDensity`
+    float temperature;
+  };
+
   void setup(glm::vec2 flowValuesSize) {
     flowValuesFbo.allocate(flowValuesSize.x, flowValuesSize.y, GL_RGBA32F);
     flowValuesFbo.getSource().begin();
@@ -52,6 +65,8 @@ public:
     temperaturesFbo.getSource().begin();
     ofClear(applyBouyancyShader.getParameterGroup().getFloat("ambientTemperature"), 1.0);
     temperaturesFbo.getSource().end();
+    
+    addImpulseSpotShader.load();
   }
 
   std::string getParameterGroupName() { return "Fluid Simulation"; }
@@ -109,12 +124,28 @@ public:
     subtractDivergenceShader.render(flowVelocitiesFbo, pressuresFbo.getSource());
   }
   
-  void draw(float x, float y, float w, float h) { flowValuesFbo.draw(x, y, w, h); }
+  void draw(float x, float y, float w, float h) {
+    ofPushView();
+    ofBlendMode(OF_BLENDMODE_ALPHA);
+    ofSetFloatColor(1.0, 1.0, 1.0, 1.0);
+    flowValuesFbo.draw(x, y, w, h);
+    ofPopView();
+  }
 
   PingPongFbo& getFlowValuesFbo() { return flowValuesFbo; }
   PingPongFbo& getFlowVelocitiesFbo() { return flowVelocitiesFbo; }
   PingPongFbo& getTemperaturesFbo() { return temperaturesFbo; }
   
+  void applyImpulse(const FluidSimulation::Impulse& impulse) {
+    glm::vec4 colorValue { impulse.color.r, impulse.color.g, impulse.color.b, impulse.color.a };
+    addImpulseSpotShader.render(flowValuesFbo, impulse.position, impulse.radius, colorValue);
+    
+    glm::vec4 velocityValue { impulse.velocity.r, impulse.velocity.g, 0.0, 0.0 };
+    addImpulseSpotShader.render(flowVelocitiesFbo, impulse.position, impulse.radius, velocityValue);
+    
+    glm::vec4 temperatureValue { impulse.temperature, 0.0, 0.0, 0.0 };
+    addImpulseSpotShader.render(temperaturesFbo, impulse.position, impulse.radius, temperatureValue);
+  }
   
 private:
   ofParameterGroup parameters;
@@ -144,4 +175,6 @@ private:
   VorticityRenderer vorticityRenderer;
   ApplyVorticityForceShader applyVorticityForceShader;
   ApplyBouyancyShader applyBouyancyShader;
+  
+  AddImpulseSpotShader addImpulseSpotShader;
 };
