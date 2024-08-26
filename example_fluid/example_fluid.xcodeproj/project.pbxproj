@@ -71,6 +71,7 @@
 		"A74447BB-B8F6-41B0-B3C1-F477648A507B" /* DivergenceRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = DivergenceRenderer.h; path = ../../../addons/ofxRenderer/src/fluid/DivergenceRenderer.h; sourceTree = SOURCE_ROOT; };
 		AAB103BA2C7A0C750046D316 /* ApplyBouyancyShader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ApplyBouyancyShader.h; path = ../src/fluid/ApplyBouyancyShader.h; sourceTree = "<group>"; };
 		AAB103BB2C7CBDD60046D316 /* AddImpulseSpotShader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = AddImpulseSpotShader.h; path = ../src/fluid/AddImpulseSpotShader.h; sourceTree = "<group>"; };
+		AAB103BD2C7CFACF0046D316 /* AddRadialImpulseShader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = AddRadialImpulseShader.h; path = ../src/fluid/AddRadialImpulseShader.h; sourceTree = "<group>"; };
 		"AE38082A-1969-4586-8B88-98985BF5D40D" /* ofxGuiUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = ofxGuiUtils.h; path = ../../../addons/ofxGui/src/ofxGuiUtils.h; sourceTree = SOURCE_ROOT; };
 		"AF4EB152-F3FE-489F-A026-46EAFD3890EE" /* Shader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = Shader.h; path = ../../../addons/ofxRenderer/src/Shader.h; sourceTree = SOURCE_ROOT; };
 		"B4E0F748-485F-4899-90E9-426541F15997" /* PingPongFbo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = PingPongFbo.h; path = ../../../addons/ofxRenderer/src/PingPongFbo.h; sourceTree = SOURCE_ROOT; };
@@ -177,6 +178,7 @@
 				"375480A7-7154-4A8F-A710-2820320D49C3" /* SubtractDivergenceShader.h */,
 				"71958217-9F0D-4373-B74B-D87743C5A576" /* VorticityRenderer.h */,
 				AAB103BB2C7CBDD60046D316 /* AddImpulseSpotShader.h */,
+				AAB103BD2C7CFACF0046D316 /* AddRadialImpulseShader.h */,
 			);
 			name = fluid;
 			sourceTree = SOURCE_ROOT;

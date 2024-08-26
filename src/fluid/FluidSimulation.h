@@ -10,6 +10,7 @@
 #include "ApplyVorticityForceShader.h"
 #include "ApplyBouyancyShader.h"
 #include "AddImpulseSpotShader.h"
+#include "AddRadialImpulseShader.h"
 
 // https://developer.nvidia.com/gpugems/gpugems/part-vi-beyond-triangles/chapter-38-fast-fluid-dynamics-simulation-gpu
 // https://github.com/patriciogonzalezvivo/ofxFluid
@@ -67,6 +68,7 @@ public:
     temperaturesFbo.getSource().end();
     
     addImpulseSpotShader.load();
+    addRadialImpulseShader.load();
   }
 
   std::string getParameterGroupName() { return "Fluid Simulation"; }
@@ -134,9 +136,10 @@ public:
   void applyImpulse(const FluidSimulation::Impulse& impulse) {
     glm::vec4 colorValue { impulse.color.r, impulse.color.g, impulse.color.b, impulse.color.a };
     addImpulseSpotShader.render(flowValuesFbo, impulse.position, impulse.radius, colorValue);
-    
-    glm::vec4 velocityValue { impulse.velocity.r, impulse.velocity.g, 0.0, 0.0 };
-    addImpulseSpotShader.render(flowVelocitiesFbo, impulse.position, impulse.radius, velocityValue);
+
+    addRadialImpulseShader.render(flowVelocitiesFbo, impulse.position, impulse.radius, impulse.radialVelocity);
+//    glm::vec4 velocityValue { impulse.velocity.r, impulse.velocity.g, 0.0, 0.0 };
+//    addImpulseSpotShader.render(flowVelocitiesFbo, impulse.position, impulse.radius, velocityValue);
     
     glm::vec4 temperatureValue { impulse.temperature, 0.0, 0.0, 0.0 };
     addImpulseSpotShader.render(temperaturesFbo, impulse.position, impulse.radius, temperatureValue);
@@ -153,7 +156,7 @@ private:
   ofParameterGroup velocityJacobiParameters;
   ofParameterGroup applyBouyancyParameters;
   ofParameterGroup pressureJacobiParameters;
-  ofParameter<float> vorticityParameter { "vorticity", 3.0, 0.00, 5.0 };
+  ofParameter<float> vorticityParameter { "vorticity", 3.0, 0.00, 10.0 };
 
   PingPongFbo flowValuesFbo;
   PingPongFbo flowVelocitiesFbo;
@@ -172,4 +175,5 @@ private:
   ApplyBouyancyShader applyBouyancyShader;
   
   AddImpulseSpotShader addImpulseSpotShader;
+  AddRadialImpulseShader addRadialImpulseShader;
 };
