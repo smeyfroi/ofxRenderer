@@ -34,7 +34,7 @@ protected:
                   float dfx = vE.x - vW.x;
                   float dfy = vN.y - vS.y;
 
-                  gl_FragColor.x = 0.5 * (dfy - dfx); // 0.5 constant changes with gridscale
+                  gl_FragColor.x = 0.5 * (dfy - dfx);
                 }
                 );
   }

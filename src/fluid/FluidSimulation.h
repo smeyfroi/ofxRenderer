@@ -66,6 +66,7 @@ public:
     temperaturesFbo.getSource().begin();
     ofClear(applyBouyancyShader.getParameterGroup().getFloat("ambientTemperature"), 1.0);
     temperaturesFbo.getSource().end();
+    applyBouyancyShader.load();
     
     addImpulseSpotShader.load();
     addRadialImpulseShader.load();
@@ -138,7 +139,7 @@ public:
     addImpulseSpotShader.render(flowValuesFbo, impulse.position, impulse.radius, colorValue);
 
     addRadialImpulseShader.render(flowVelocitiesFbo, impulse.position, impulse.radius, impulse.radialVelocity);
-//    glm::vec4 velocityValue { impulse.velocity.r, impulse.velocity.g, 0.0, 0.0 };
+    glm::vec4 velocityValue { impulse.velocity.r, impulse.velocity.g, 0.0, 0.0 };
 //    addImpulseSpotShader.render(flowVelocitiesFbo, impulse.position, impulse.radius, velocityValue);
     
     glm::vec4 temperatureValue { impulse.temperature, 0.0, 0.0, 0.0 };

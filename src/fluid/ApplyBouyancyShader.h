@@ -12,7 +12,6 @@ public:
     shader.setUniform1f("dt", dt);
     shader.setUniformTexture("temperatures", temperatures.getSource(), 1);
     shader.setUniformTexture("values", values.getSource(), 2);
-
     velocities.getTarget().begin();
     velocities.getSource().draw(0, 0);
     velocities.getTarget().end();
@@ -61,9 +60,12 @@ protected:
                   gl_FragColor.xy = velocity;
                   
                   if (temperature > ambientTemperature) {
-                    float value = texture2D(values, xy);
-                    float density = (value.x + value.y + value.z) / 3.0;
-                    gl_FragColor.xy += (dt * (temperature - ambientTemperature) * smokeBouyancy - density * smokeWeight) * vec2(gravityForceX, gravityForceY);
+                    gl_FragColor.xy += 10.0;
+
+//                    vec4 value = texture2D(values, xy);
+//                    float density = value.a;
+////                    float density = (value.r + value.g + value.b) * value.a / 3.0;
+//                    gl_FragColor.xy += (dt * (temperature - ambientTemperature) * smokeBouyancy - density * smokeWeight) * vec2(gravityForceX, gravityForceY);
                   }
                 }
                 );
@@ -71,7 +73,7 @@ protected:
 
 private:
   ofParameterGroup parameters { "Bouyancy" };
-  ofParameter<float> ambientTemperatureParameter {"ambientTemperature", 0.0, 0.0, 1.0 };
+  ofParameter<float> ambientTemperatureParameter {"ambientTemperature", 0.0, 0.0, 100.0 };
   ofParameter<float> smokeBouyancyParameter {"smokeBouyancy", 1.0, 0.0, 10.0 };
   ofParameter<float> smokeWeightParameter {"smokeWeight", 0.05, 0.0, 1.0 };
   ofParameter<float> gravityForceXParameter {"gravityForceX", 0.0, -5.0, 5.0 };

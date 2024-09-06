@@ -37,7 +37,7 @@ protected:
                   float pS = texture2D(pressures, xy-off.yx).r;
                   float pE = texture2D(pressures, xy+off.xy).r;
                   float pW = texture2D(pressures, xy-off.xy).r;
-                  vec2 grad = vec2(pE - pW, pN - pS) * 0.5; // TODO: add gradientScale = 1.0 / cellSize // https://github.com/patriciogonzalezvivo/ofxFluid/blob/master/src/ofxFluid.cpp#L113
+                  vec2 grad = vec2(pE - pW, pN - pS) * 0.5;
                   
                   vec2 oldV = texture2D(tex0, xy).xy;
                   vec2 newV = oldV - grad;

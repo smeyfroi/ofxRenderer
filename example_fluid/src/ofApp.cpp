@@ -22,7 +22,7 @@ void ofApp::update() {
       30.0, // radius
       { (ofGetMouseX() - ofGetPreviousMouseX())*0.005, (ofGetMouseY() - ofGetPreviousMouseY())*0.005 }, // velocity
       0.05, // radialVelocity
-      ofFloatColor(0.2+ofRandom(0.2), 0.05+ofRandom(0.1), 0.1+ofRandom(0.15), 0.1),
+      ofFloatColor(0.2+ofRandom(0.4), 0.05+ofRandom(0.3), 0.1+ofRandom(0.3), 0.05)*0.1,
       10.0 // temperature
     };
     fluidSimulation.applyImpulse(impulse);

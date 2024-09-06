@@ -33,7 +33,7 @@ protected:
                   
                   // This also needs obstacle support, see https://github.com/patriciogonzalezvivo/ofxFluid/blob/master/src/ofxFluid.cpp#L161
 
-                  gl_FragColor.r = (vE.x - vW.x + vN.y - vS.y) * 0.5; // TODO: extract HalfInverseCellSize = 0.5f/cellSize // https://github.com/patriciogonzalezvivo/ofxFluid/blob/master/src/ofxFluid.cpp#L269
+                  gl_FragColor.r = (vE.x - vW.x + vN.y - vS.y) * 0.5;
                 }
                 );
   }

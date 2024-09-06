@@ -54,5 +54,5 @@ protected:
   
 private:
   ofParameterGroup parameters { "Advection" };
-  ofParameter<float> dissipationParameter { "dissipation", 0.990, 0.995, 1.0 };
+  ofParameter<float> dissipationParameter { "dissipation", 0.995, 0.990, 1.0 };
 };
