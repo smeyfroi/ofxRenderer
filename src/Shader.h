@@ -25,7 +25,6 @@ public:
   // Basic convenience implementation
   virtual void render(const ofBaseDraws& fbo_) {
     shader.begin();
-    setupShaders();
     fbo_.draw(0, 0);
     shader.end();
   }
@@ -37,7 +36,6 @@ public:
     fbo_.getTarget().begin();
     {
       shader.begin();
-      setupShaders();
       fbo_.getSource().draw(0, 0);
       shader.end();
     }
@@ -48,13 +46,12 @@ public:
 protected:
   ofShader shader;
 
-  virtual void setupShaders() {};
-
   virtual std::string getVertexShader() {
     return GLSL(
                 void main() {
                   gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
                   gl_TexCoord[0] = gl_MultiTexCoord0;
+//                  gl_FrontColor = gl_Color; // access front mesh color from ofSetColor
                 }
                 );
   }

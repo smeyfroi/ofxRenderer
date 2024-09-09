@@ -5,13 +5,13 @@
 class AdvectShader : public Shader {
 
 public:
-  void render(PingPongFbo& values, const ofTexture& velocities, float dt) {
+  void render(PingPongFbo& values, const ofTexture& velocities, float dt, float dissipation) {
     values.getTarget().begin();
     shader.begin();
     {
-      setupShaders();
       shader.setUniformTexture("velocities", velocities, 1);
       shader.setUniform1f("dt", dt);
+      shader.setUniform1f("dissipation", dissipation);
       values.getSource().draw(0, 0);
     }
     shader.end();
@@ -19,20 +19,11 @@ public:
     values.swap();
   }
   
-  ofParameterGroup& getParameterGroup(const std::string& prefix) {
-    if (parameters.size() == 0) {
-      parameters.setName(prefix + parameters.getName());
-      dissipationParameter.setName(prefix + dissipationParameter.getName());
-      parameters.add(dissipationParameter);
-    }
-    return parameters;
+  static ofParameter<float> createDissipationParameter(const std::string& prefix, float value=0.996) {
+    return ofParameter<float> { prefix+"dissipation", value, 0.990, 1.0 };
   }
 
 protected:
-  void setupShaders() override {
-    shader.setUniform1f("dissipation", dissipationParameter);
-  }
-  
   std::string getFragmentShader() override {
     return GLSL(
                 uniform sampler2D tex0; // previous values
@@ -51,8 +42,4 @@ protected:
                 }
                 );
   }
-  
-private:
-  ofParameterGroup parameters { "Advection" };
-  ofParameter<float> dissipationParameter { "dissipation", 0.996, 0.990, 1.0 };
 };

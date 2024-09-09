@@ -5,15 +5,14 @@
 class JacobiShader : public Shader {
 
 public:
-  void render(PingPongFbo& x, const ofTexture& b, float dt, float alpha, float rBeta) {
+  void render(PingPongFbo& x, const ofTexture& b, float dt, float alpha, float rBeta, int iterations) {
     ofEnableBlendMode(OF_BLENDMODE_DISABLED);
     shader.begin();
-    setupShaders();
     shader.setUniformTexture("b", b, 1);
     shader.setUniform2f("texSize", glm::vec2(x.getSource().getWidth(), x.getSource().getHeight()));
     shader.setUniform1f("alpha", alpha);
     shader.setUniform1f("rBeta", rBeta);
-    for (int i = 0; i < iterationsParameter; i++) {
+    for (int i = 0; i < iterations; i++) {
       x.getTarget().begin();
       x.getSource().draw(0, 0);
       x.getTarget().end();
@@ -22,13 +21,8 @@ public:
     shader.end();
   }
   
-  ofParameterGroup& getParameterGroup(std::string prefix) {
-    if (parameters.size() == 0) {
-      parameters.setName(prefix + parameters.getName());
-      iterationsParameter.setName(prefix + iterationsParameter.getName());
-      parameters.add(iterationsParameter);
-    }
-    return parameters;
+  static ofParameter<int> createIterationsParameter(const std::string& prefix, int value=40) {
+    return ofParameter<int> { prefix+"iterations", value, 10, 80 };
   }
 
 protected:
@@ -57,8 +51,4 @@ protected:
                 }
                 );
   }
-
-private:
-  ofParameterGroup parameters { "Diffusion" };
-  ofParameter<int> iterationsParameter {"iterations", 40, 10, 80 };
 };

@@ -64,7 +64,7 @@ public:
 
     temperaturesFbo.allocate(flowValuesSize.x, flowValuesSize.y, GL_RGB32F);
     temperaturesFbo.getSource().begin();
-    ofClear(applyBouyancyShader.getParameterGroup().getFloat("ambientTemperature"), 1.0);
+    ofClear(ambientTemperatureParameter, 1.0);
     temperaturesFbo.getSource().end();
     applyBouyancyShader.load();
     
@@ -79,35 +79,33 @@ public:
       parameters.setName(getParameterGroupName());
       parameters.add(dtParameter);
       parameters.add(vorticityParameter);
-      valueAdvectParameters = valueAdvectShader.getParameterGroup("value:");
-      parameters.add(valueAdvectParameters);
-      velocityAdvectParameters = velocityAdvectShader.getParameterGroup("velocity:");
-      parameters.add(velocityAdvectParameters);
-      temperatureAdvectParameters = temperaturesAdvectShader.getParameterGroup("temperature:");
-      parameters.add(temperatureAdvectParameters);
-      valueJacobiParameters = valueJacobiShader.getParameterGroup("value:");
-      parameters.add(valueJacobiParameters);
-      velocityJacobiParameters = velocityJacobiShader.getParameterGroup("velocity:");
-      parameters.add(velocityJacobiParameters);
-      applyBouyancyParameters = applyBouyancyShader.getParameterGroup();
+      parameters.add(valueAdvectDissipationParameter);
+      parameters.add(velocityAdvectDissipationParameter);
+      parameters.add(temperatureAdvectDissipationParameter);
+//      parameters.add(valueDiffusionIterationsParameter);
+//      parameters.add(velocityDiffusionIterationsParameter);
+      parameters.add(pressureDiffusionIterationsParameter);
+      applyBouyancyParameters.add(ambientTemperatureParameter);
+      applyBouyancyParameters.add(smokeBouyancyParameter);
+      applyBouyancyParameters.add(smokeWeightParameter);
+      applyBouyancyParameters.add(gravityForceXParameter);
+      applyBouyancyParameters.add(gravityForceYParameter);
       parameters.add(applyBouyancyParameters);
-      pressureJacobiParameters = pressureJacobiShader.getParameterGroup("pressure:");
-      parameters.add(pressureJacobiParameters);
     }
     return parameters;
   }
   
   void update() {
     // advect
-    velocityAdvectShader.render(flowVelocitiesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter);
-    temperaturesAdvectShader.render(temperaturesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter);
-    valueAdvectShader.render(flowValuesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter);
+    velocityAdvectShader.render(flowVelocitiesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter, velocityAdvectDissipationParameter);
+    temperaturesAdvectShader.render(temperaturesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter, temperatureAdvectDissipationParameter);
+    valueAdvectShader.render(flowValuesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter, valueAdvectDissipationParameter);
     
-    applyBouyancyShader.render(flowVelocitiesFbo, temperaturesFbo, flowValuesFbo, dtParameter);
+    applyBouyancyShader.render(flowVelocitiesFbo, temperaturesFbo, flowValuesFbo, dtParameter, ambientTemperatureParameter, smokeBouyancyParameter, smokeWeightParameter, gravityForceXParameter, gravityForceYParameter);
 
     // diffuse
-//    velocityJacobiShader.render(flowVelocitiesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter, 1.0E-3, 0.25);
-//    valueJacobiShader.render(flowValuesFbo, flowValuesFbo.getSource().getTexture(), dtParameter, -1.0E-3, 0.25);
+//    velocityJacobiShader.render(flowVelocitiesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter, 1.0E-3, 0.25, velocityDiffusionIterationsParameter);
+//    valueJacobiShader.render(flowValuesFbo, flowValuesFbo.getSource().getTexture(), dtParameter, -1.0E-3, 0.25, valueDiffusionIterationsParameter);
     
     // add forces
     vorticityRenderer.render(flowVelocitiesFbo.getSource());
@@ -118,7 +116,7 @@ public:
     pressuresFbo.getSource().begin();
     ofClear(0, 0, 0);
     pressuresFbo.getSource().end();
-    pressureJacobiShader.render(pressuresFbo, divergenceRenderer.getFbo().getTexture(), dtParameter, -1.0, 0.25); // alpha should be -cellSize * cellSize
+    pressureJacobiShader.render(pressuresFbo, divergenceRenderer.getFbo().getTexture(), dtParameter, -1.0, 0.25, pressureDiffusionIterationsParameter); // alpha should be -cellSize * cellSize
     subtractDivergenceShader.render(flowVelocitiesFbo, pressuresFbo.getSource());
   }
   
@@ -150,14 +148,20 @@ private:
   ofParameterGroup parameters;
 
   ofParameter<float> dtParameter { "dt", 0.125, 0.01, 0.5 };
-  ofParameterGroup valueAdvectParameters;
-  ofParameterGroup velocityAdvectParameters;
-  ofParameterGroup temperatureAdvectParameters;
-  ofParameterGroup valueJacobiParameters;
-  ofParameterGroup velocityJacobiParameters;
-  ofParameterGroup applyBouyancyParameters;
-  ofParameterGroup pressureJacobiParameters;
   ofParameter<float> vorticityParameter { "vorticity", 3.0, 0.00, 10.0 };
+  
+  ofParameter<float> valueAdvectDissipationParameter = AdvectShader::createDissipationParameter("value:", 0.9955);
+  ofParameter<float> velocityAdvectDissipationParameter = AdvectShader::createDissipationParameter("velocity:", 0.9975);
+  ofParameter<float> temperatureAdvectDissipationParameter = AdvectShader::createDissipationParameter("temperature:");
+  ofParameter<int> valueDiffusionIterationsParameter = JacobiShader::createIterationsParameter("value:");
+  ofParameter<int> velocityDiffusionIterationsParameter = JacobiShader::createIterationsParameter("velocity:");
+  ofParameter<int> pressureDiffusionIterationsParameter = JacobiShader::createIterationsParameter("pressure:");
+  ofParameterGroup applyBouyancyParameters { "Bouyancy" };
+  ofParameter<float> ambientTemperatureParameter = ApplyBouyancyShader::createAmbientTemperatureParameter();
+  ofParameter<float> smokeBouyancyParameter = ApplyBouyancyShader::createSmokeBouyancyParameter();
+  ofParameter<float> smokeWeightParameter = ApplyBouyancyShader::createSmokeWeightParameter();
+  ofParameter<float> gravityForceXParameter = ApplyBouyancyShader::createGravityForceXParameter();
+  ofParameter<float> gravityForceYParameter = ApplyBouyancyShader::createGravityForceYParameter();
 
   PingPongFbo flowValuesFbo;
   PingPongFbo flowVelocitiesFbo;

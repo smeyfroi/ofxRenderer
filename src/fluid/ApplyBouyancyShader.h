@@ -5,11 +5,15 @@
 class ApplyBouyancyShader : public Shader {
 
 public:
-  void render(PingPongFbo& velocities, PingPongFbo& temperatures, PingPongFbo& values, float dt) {
+  void render(PingPongFbo& velocities, PingPongFbo& temperatures, PingPongFbo& values, float dt, float ambientTemperature, float smokeBouyancy, float smokeWeight, float gravityForceX, float gravityForceY) {
     ofEnableBlendMode(OF_BLENDMODE_DISABLED);
     shader.begin();
-    setupShaders();
     shader.setUniform1f("dt", dt);
+    shader.setUniform1f("ambientTemperature", ambientTemperature);
+    shader.setUniform1f("smokeBouyancy", smokeBouyancy);
+    shader.setUniform1f("smokeWeight", smokeWeight);
+    shader.setUniform1f("gravityForceX", gravityForceX);
+    shader.setUniform1f("gravityForceY", gravityForceY);
     shader.setUniformTexture("temperatures", temperatures.getSource(), 1);
     shader.setUniformTexture("values", values.getSource(), 2);
     velocities.getTarget().begin();
@@ -19,26 +23,27 @@ public:
     shader.end();
   }
   
-  ofParameterGroup& getParameterGroup() {
-    if (parameters.size() == 0) {
-      parameters.add(ambientTemperatureParameter);
-      parameters.add(smokeBouyancyParameter);
-      parameters.add(smokeWeightParameter);
-      parameters.add(gravityForceXParameter);
-      parameters.add(gravityForceYParameter);
-    }
-    return parameters;
+  static ofParameter<float> createAmbientTemperatureParameter(float value=0.0) {
+    return ofParameter<float> { "ambientTemperature", value, 0.0, 100.0 };
+  }
+
+  static ofParameter<float> createSmokeBouyancyParameter(float value=1.0) {
+    return ofParameter<float> { "smokeBouyancy", value, 0.0, 10.0 };
+  }
+
+  static ofParameter<float> createSmokeWeightParameter(float value=0.05) {
+    return ofParameter<float> { "smokeWeight", value, 0.0, 1.0 };
+  }
+
+  static ofParameter<float> createGravityForceXParameter(float value=0.0) {
+    return ofParameter<float> { "gravityForceX", value, -5.0, 5.0 };
+  }
+
+  static ofParameter<float> createGravityForceYParameter(float value=-0.98) {
+    return ofParameter<float> { "gravityForceY", value, -5.0, 5.0 };
   }
 
 protected:
-  void setupShaders() override {
-    shader.setUniform1f("ambientTemperature", ambientTemperatureParameter);
-    shader.setUniform1f("smokeBouyancy", smokeBouyancyParameter);
-    shader.setUniform1f("smokeWeight", smokeWeightParameter);
-    shader.setUniform1f("gravityForceX", gravityForceXParameter);
-    shader.setUniform1f("gravityForceY", gravityForceYParameter);
-  }
-  
   std::string getFragmentShader() override {
     return GLSL(
                 uniform sampler2D tex0; // velocities
@@ -70,12 +75,4 @@ protected:
                 }
                 );
   }
-
-private:
-  ofParameterGroup parameters { "Bouyancy" };
-  ofParameter<float> ambientTemperatureParameter {"ambientTemperature", 0.0, 0.0, 100.0 };
-  ofParameter<float> smokeBouyancyParameter {"smokeBouyancy", 1.0, 0.0, 10.0 };
-  ofParameter<float> smokeWeightParameter {"smokeWeight", 0.05, 0.0, 1.0 };
-  ofParameter<float> gravityForceXParameter {"gravityForceX", 0.0, -5.0, 5.0 };
-  ofParameter<float> gravityForceYParameter {"gravityForceY", -0.98, -5.0, 5.0 };
 };
