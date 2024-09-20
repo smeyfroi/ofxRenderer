@@ -147,15 +147,15 @@ public:
 private:
   ofParameterGroup parameters;
 
-  ofParameter<float> dtParameter { "dt", 0.125, 0.01, 0.5 };
-  ofParameter<float> vorticityParameter { "vorticity", 3.0, 0.00, 10.0 };
+  ofParameter<float> dtParameter { "dt", 0.125, 0.001, 0.5 };
+  ofParameter<float> vorticityParameter { "vorticity", 6.0, 0.00, 30.0 };
   
-  ofParameter<float> valueAdvectDissipationParameter = AdvectShader::createDissipationParameter("value:", 0.9955);
-  ofParameter<float> velocityAdvectDissipationParameter = AdvectShader::createDissipationParameter("velocity:", 0.9975);
+  ofParameter<float> valueAdvectDissipationParameter = AdvectShader::createDissipationParameter("value:", 0.998);
+  ofParameter<float> velocityAdvectDissipationParameter = AdvectShader::createDissipationParameter("velocity:", 0.999);
   ofParameter<float> temperatureAdvectDissipationParameter = AdvectShader::createDissipationParameter("temperature:");
   ofParameter<int> valueDiffusionIterationsParameter = JacobiShader::createIterationsParameter("value:");
   ofParameter<int> velocityDiffusionIterationsParameter = JacobiShader::createIterationsParameter("velocity:");
-  ofParameter<int> pressureDiffusionIterationsParameter = JacobiShader::createIterationsParameter("pressure:");
+  ofParameter<int> pressureDiffusionIterationsParameter = JacobiShader::createIterationsParameter("pressure:", 30);
   ofParameterGroup applyBouyancyParameters { "Bouyancy" };
   ofParameter<float> ambientTemperatureParameter = ApplyBouyancyShader::createAmbientTemperatureParameter();
   ofParameter<float> smokeBouyancyParameter = ApplyBouyancyShader::createSmokeBouyancyParameter();
