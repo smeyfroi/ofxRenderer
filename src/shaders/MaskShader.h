@@ -38,12 +38,13 @@ protected:
                   vec2 xy = gl_TexCoord[0].st;
                   
                   // Draw foreground color with the mask red as alpha
-                  vec2 foregroundXY = (xy - scaleCentre) * 1.0 / foregroundScale + scaleCentre;
+                  vec2 foregroundXY = (xy - scaleCentre) * foregroundScale + scaleCentre;
                   vec4 foregroundColor = texture2D(tex0, foregroundXY);
                   float positiveAlpha = texture2D(mask, xy).r;
                   float negativeAlpha = 1.0 - positiveAlpha;
                   float maskAlpha = (invert*negativeAlpha) + ((1.0-invert)*positiveAlpha);
-                  gl_FragColor = gl_Color * vec4(foregroundColor.rgb, maskAlpha); // * foregroundColor.a);
+//                  gl_FragColor = gl_Color * vec4(foregroundColor.rgb, maskAlpha); // * foregroundColor.a);
+                  gl_FragColor = gl_Color * vec4(foregroundColor.rgb, maskAlpha * foregroundColor.a);
                 }
                 );
   }
