@@ -36,7 +36,7 @@ public:
   void setup(glm::vec2 flowValuesSize) {
     flowValuesFbo.allocate(flowValuesSize.x, flowValuesSize.y, GL_RGBA32F);
     flowValuesFbo.getSource().begin();
-    ofClear(ofFloatColor(0.0, 0.0, 0.0, 0.0));
+    ofClear(ofFloatColor(0.0, 0.0, 0.0, 1.0));
     flowValuesFbo.getSource().end();
 
     flowVelocitiesFbo.allocate(flowValuesSize.x, flowValuesSize.y, GL_RGB32F);
@@ -64,7 +64,7 @@ public:
 
     temperaturesFbo.allocate(flowValuesSize.x, flowValuesSize.y, GL_RGB32F);
     temperaturesFbo.getSource().begin();
-    ofClear(ambientTemperatureParameter, 1.0);
+    ofClear(ofFloatColor(ambientTemperatureParameter));
     temperaturesFbo.getSource().end();
     applyBouyancyShader.load();
     
