@@ -1,19 +1,26 @@
 #pragma once
 
 #include "Shader.h"
+#include "ofGraphics.h"
 
+// TODO: rename to MultiplyShader
 class FadeShader : public Shader {
 
 public:
-  FadeShader(ofFloatColor fadeBy_) :
-  fadeBy { fadeBy_ }
-  {}
-  
-protected:
-  void setupShaders() override {
-    shader.setUniform4f("fadeBy", fadeBy);
+  void render(PingPongFbo& fbo_, glm::vec4 fadeBy) {
+    fbo_.getTarget().begin();
+    {
+      shader.begin();
+      shader.setUniform4f("fadeBy", fadeBy);
+      ofEnableBlendMode(OF_BLENDMODE_ALPHA);
+      fbo_.getSource().draw(0, 0);
+      shader.end();
+    }
+    fbo_.getTarget().end();
+    fbo_.swap();
   }
-  
+
+protected:
   std::string getFragmentShader() override {
     return GLSL(
                 uniform sampler2D tex0;
@@ -27,7 +34,4 @@ protected:
                 }
                 );
   }
-  
-private:
-  ofFloatColor fadeBy;
 };
