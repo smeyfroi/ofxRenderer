@@ -2,7 +2,7 @@
 
 #include "ofMain.h"
 #include "ofxGui.h"
-#include "FadeShader.h"
+#include "MultiplyColorShader.h"
 #include "PingPongFbo.h"
 
 class ofApp: public ofBaseApp {
@@ -22,11 +22,12 @@ class ofApp: public ofBaseApp {
 		void gotMessage(ofMessage msg);
 		
 private:
-  FadeShader fadeShader;
+  MultiplyColorShader multiplyColorShader;
   
   PingPongFbo fbo;
 
   ofxPanel gui;
-  ofParameter<float> fadeAmountParameter { "fadeAmount", 0.95, 0.0, 1.0 };
+  ofParameter<float> multiplyAmountParameter { "fadeAmount", 0.95, 0.0, 10.0 };
+  ofParameter<float> clampFactorParameter { "clampFactor", 0.0, 0.0, 10.0 };
   ofParameterGroup parameters;
 };

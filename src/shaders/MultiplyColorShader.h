@@ -1,41 +1,37 @@
 #pragma once
 
 #include "Shader.h"
+#include "ofGraphics.h"
 
-class MultiplyColorShader : public Shader {
+// TODO: rename to MultiplyShader
+class FadeShader : public Shader {
 
 public:
-  MultiplyColorShader(ofFloatColor multiplyBy_) :
-  multiplyBy { multiplyBy_ }
-  {}
-  
-  inline void setMultiplyBy(ofFloatColor multiplyBy_) { multiplyBy = multiplyBy_; }
-  
-  void render(const ofBaseDraws& fbo_, float x, float y, float w, float h) {
-    shader.begin();
-    setupShaders();
-    fbo_.draw(x, y, w, h);
-    shader.end();
+  void render(PingPongFbo& fbo_, glm::vec4 fadeBy) {
+    fbo_.getTarget().begin();
+    {
+      shader.begin();
+      shader.setUniform4f("fadeBy", fadeBy);
+      ofEnableBlendMode(OF_BLENDMODE_ALPHA);
+      fbo_.getSource().draw(0, 0);
+      shader.end();
+    }
+    fbo_.getTarget().end();
+    fbo_.swap();
   }
 
 protected:
-  void setupShaders() override {
-    shader.setUniform4f("multiplyBy", multiplyBy);
-  }
-  
   std::string getFragmentShader() override {
     return GLSL(
                 uniform sampler2D tex0;
-                uniform vec4 multiplyBy;
-
+                uniform vec4 fadeBy;
+                
                 void main() {
                   vec2 xy = gl_TexCoord[0].st;
                   vec4 color = texture2D(tex0, xy);
-                  gl_FragColor = color * multiplyBy;
+                  vec4 fadedColor = color * fadeBy;
+                  gl_FragColor = fadedColor;
                 }
                 );
   }
-  
-private:
-  ofFloatColor multiplyBy;
 };

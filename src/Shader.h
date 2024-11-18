@@ -31,8 +31,6 @@ public:
 
   // Basic convenience implementation
   virtual void render(PingPongFbo& fbo_) {
-//    ofEnableBlendMode(OF_BLENDMODE_ALPHA);
-//    ofSetColor(255);
     fbo_.getTarget().begin();
     {
       shader.begin();

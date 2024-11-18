@@ -3,29 +3,35 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
   ofEnableAlphaBlending();
-  ofDisableArbTex(); // required for texture2D to work in GLSL, makes texture coords normalized
-  ofSetFrameRate(60);
+  ofDisableArbTex();
   
-  fbo.allocate(ofGetWindowWidth(), ofGetWindowHeight(), GL_RGBA16F);
+  fbo.allocate(ofGetWindowWidth(), ofGetWindowHeight(), GL_RGBA32F);
   fbo.getSource().clearColorBuffer(ofFloatColor(0.0, 0.0, 0.0, 0.0));
 
-  fadeShader.load();
-  parameters.add(fadeAmountParameter);
+  multiplyColorShader.load();
+  
+  parameters.add(multiplyAmountParameter);
+  parameters.add(clampFactorParameter);
   gui.setup(parameters);
 }
 
 //--------------------------------------------------------------
 void ofApp::update() {
   fbo.getSource().begin();
-  ofSetColor(ofRandom(255), ofRandom(255), ofRandom(255));
-  ofDrawCircle(ofRandomWidth(), ofRandomHeight(), 20.0);
+  {
+    ofEnableBlendMode(OF_BLENDMODE_ALPHA);
+    ofSetColor(ofFloatColor(ofRandom(1.0), ofRandom(1.0), ofRandom(1.0), 1.0));
+    ofDrawCircle(ofRandomWidth(), ofRandomHeight(), 20.0);
+  }
   fbo.getSource().end();
-  fadeShader.render(fbo, glm::vec4 { 1.0, 1.0, 1.0, fadeAmountParameter });
+
+  multiplyColorShader.render(fbo, glm::vec4 { 1.0, 1.0, 1.0, multiplyAmountParameter }, clampFactorParameter);
 }
 
 //--------------------------------------------------------------
 void ofApp::draw() {
   ofClear(0, 255);
+  ofEnableBlendMode(OF_BLENDMODE_ALPHA);
   fbo.draw(0, 0, ofGetWindowWidth(), ofGetWindowHeight());
   gui.draw();
 }
