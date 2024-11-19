@@ -9,6 +9,7 @@ void ofApp::setup(){
   fbo.getSource().clearColorBuffer(ofFloatColor(0.0, 0.0, 0.0, 0.0));
 
   multiplyColorShader.load();
+  logisticFnShader.load();
   
   parameters.add(multiplyAmountParameter);
   parameters.add(clampFactorParameter);
@@ -25,7 +26,8 @@ void ofApp::update() {
   }
   fbo.getSource().end();
 
-  multiplyColorShader.render(fbo, glm::vec4 { 1.0, 1.0, 1.0, multiplyAmountParameter }, glm::vec4 { 0.0, 0.0, 0.0, clampFactorParameter });
+  multiplyColorShader.render(fbo, glm::vec4 { 1.0, 1.0, 1.0, multiplyAmountParameter });
+  logisticFnShader.render(fbo, glm::vec4 { 0.0, 0.0, 0.0, clampFactorParameter });
 }
 
 //--------------------------------------------------------------

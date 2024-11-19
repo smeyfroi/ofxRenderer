@@ -3,16 +3,14 @@
 #include "Shader.h"
 #include "ofGraphics.h"
 
-// TODO: rename to MultiplyShader
-class FadeShader : public Shader {
+class MultiplyColorShader : public Shader {
 
 public:
-  void render(PingPongFbo& fbo_, glm::vec4 fadeBy) {
+  void render(PingPongFbo& fbo_, glm::vec4 multiplyBy) {
     fbo_.getTarget().begin();
     {
       shader.begin();
-      shader.setUniform4f("fadeBy", fadeBy);
-      ofEnableBlendMode(OF_BLENDMODE_ALPHA);
+      shader.setUniform4f("multiplyBy", multiplyBy);
       fbo_.getSource().draw(0, 0);
       shader.end();
     }
@@ -24,13 +22,12 @@ protected:
   std::string getFragmentShader() override {
     return GLSL(
                 uniform sampler2D tex0;
-                uniform vec4 fadeBy;
+                uniform vec4 multiplyBy;
                 
                 void main() {
                   vec2 xy = gl_TexCoord[0].st;
                   vec4 color = texture2D(tex0, xy);
-                  vec4 fadedColor = color * fadeBy;
-                  gl_FragColor = fadedColor;
+                  gl_FragColor = color * multiplyBy;
                 }
                 );
   }

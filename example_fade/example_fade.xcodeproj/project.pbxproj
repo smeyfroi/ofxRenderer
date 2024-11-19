@@ -77,7 +77,8 @@
 		"98B5E269-96D2-4577-9764-94270B835214" /* bin/data */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = folder; path = bin/data; sourceTree = SOURCE_ROOT; };
 		"98BBB73B-B8B3-4770-AB6B-95EA095A8348" /* AddImpulseSpotShader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = AddImpulseSpotShader.h; path = ../../../addons/ofxRenderer/src/fluid/AddImpulseSpotShader.h; sourceTree = SOURCE_ROOT; };
 		"A7CBD996-4DB2-4B84-ADCE-73BC8000745B" /* AdvectShader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = AdvectShader.h; path = ../../../addons/ofxRenderer/src/fluid/AdvectShader.h; sourceTree = SOURCE_ROOT; };
-		AA21651E2CEA84B4002EC72E /* MultiplyColorShader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MultiplyColorShader.h; sourceTree = "<group>"; };
+		AA21651F2CED2763002EC72E /* LogisticFnShader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = LogisticFnShader.h; path = ../src/shaders/LogisticFnShader.h; sourceTree = SOURCE_ROOT; };
+		AA2165202CED27C7002EC72E /* MultiplyColorShader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = MultiplyColorShader.h; path = ../src/shaders/MultiplyColorShader.h; sourceTree = SOURCE_ROOT; };
 		"AD5C637D-BEBC-4ECE-BEA2-EBF418A0B164" /* SubtractDivergenceShader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = SubtractDivergenceShader.h; path = ../../../addons/ofxRenderer/src/fluid/SubtractDivergenceShader.h; sourceTree = SOURCE_ROOT; };
 		"C2836C25-45F1-4631-A3C6-DE866C175862" /* JacobiShader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = JacobiShader.h; path = ../../../addons/ofxRenderer/src/fluid/JacobiShader.h; sourceTree = SOURCE_ROOT; };
 		"C31170EC-E728-4BE8-98B3-E5F3542CD7A3" /* ofxButton.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ofxButton.cpp; path = ../../../addons/ofxGui/src/ofxButton.cpp; sourceTree = SOURCE_ROOT; };
@@ -222,8 +223,9 @@
 				"96AFEFEE-473F-4F3F-9B50-3611F840EB1E" /* AddTextureShader.h */,
 				"2CF369EE-14B5-4CAC-8B84-743487A3BE7E" /* GaussianXBlurShader.h */,
 				"08F61BA6-8606-4BAB-B228-6D077715184A" /* GaussianYBlurShader.h */,
+				AA21651F2CED2763002EC72E /* LogisticFnShader.h */,
 				"522EDAEF-F509-419C-BDE3-78FEB719F54B" /* MaskShader.h */,
-				AA21651E2CEA84B4002EC72E /* MultiplyColorShader.h */,
+				AA2165202CED27C7002EC72E /* MultiplyColorShader.h */,
 				"597EBA1A-D5D9-401A-A360-7D404CB1CE73" /* OpticalFlowShader.h */,
 			);
 			name = shaders;

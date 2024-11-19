@@ -3,6 +3,7 @@
 #include "ofMain.h"
 #include "ofxGui.h"
 #include "MultiplyColorShader.h"
+#include "LogisticFnShader.h"
 #include "PingPongFbo.h"
 
 class ofApp: public ofBaseApp {
@@ -23,6 +24,7 @@ class ofApp: public ofBaseApp {
 		
 private:
   MultiplyColorShader multiplyColorShader;
+  LogisticFnShader logisticFnShader;
   
   PingPongFbo fbo;
 
