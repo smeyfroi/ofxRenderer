@@ -25,7 +25,7 @@ void ofApp::update() {
   }
   fbo.getSource().end();
 
-  multiplyColorShader.render(fbo, glm::vec4 { 1.0, 1.0, 1.0, multiplyAmountParameter }, clampFactorParameter);
+  multiplyColorShader.render(fbo, glm::vec4 { 1.0, 1.0, 1.0, multiplyAmountParameter }, glm::vec4 { 0.0, 0.0, 0.0, clampFactorParameter });
 }
 
 //--------------------------------------------------------------
