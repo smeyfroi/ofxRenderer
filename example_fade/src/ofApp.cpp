@@ -10,9 +10,11 @@ void ofApp::setup(){
 
   multiplyColorShader.load();
   logisticFnShader.load();
+  translateShader.load();
   
   parameters.add(multiplyAmountParameter);
   parameters.add(clampFactorParameter);
+  parameters.add(translateByParameter);
   gui.setup(parameters);
 }
 
@@ -28,6 +30,7 @@ void ofApp::update() {
 
   multiplyColorShader.render(fbo, glm::vec4 { 1.0, 1.0, 1.0, multiplyAmountParameter });
   logisticFnShader.render(fbo, glm::vec4 { 0.0, 0.0, 0.0, clampFactorParameter });
+  translateShader.render(fbo, translateByParameter);
 }
 
 //--------------------------------------------------------------

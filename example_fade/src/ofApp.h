@@ -4,6 +4,7 @@
 #include "ofxGui.h"
 #include "MultiplyColorShader.h"
 #include "LogisticFnShader.h"
+#include "TranslateShader.h"
 #include "PingPongFbo.h"
 
 class ofApp: public ofBaseApp {
@@ -25,11 +26,13 @@ class ofApp: public ofBaseApp {
 private:
   MultiplyColorShader multiplyColorShader;
   LogisticFnShader logisticFnShader;
+  TranslateShader translateShader;
   
   PingPongFbo fbo;
 
   ofxPanel gui;
   ofParameter<float> multiplyAmountParameter { "fadeAmount", 0.95, 0.0, 10.0 };
   ofParameter<float> clampFactorParameter { "clampFactor", 0.0, 0.0, 10.0 };
+  ofParameter<glm::vec2> translateByParameter { "translateBy", {0.0, 0.0}, {-0.01, -0.01}, {0.01, 0.01} };
   ofParameterGroup parameters;
 };
