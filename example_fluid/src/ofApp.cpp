@@ -1,6 +1,6 @@
 #include "ofApp.h"
 
-constexpr float SCALE = 0.5;
+constexpr float SCALE = 2.0;
 
 //--------------------------------------------------------------
 void ofApp::setup(){
@@ -19,9 +19,9 @@ void ofApp::update() {
   if (ofGetMousePressed()) {
     FluidSimulation::Impulse impulse {
       { ofGetMouseX()*SCALE, ofGetMouseY()*SCALE },
-      30.0, // radius
+      30.0*SCALE, // radius
       { (ofGetMouseX() - ofGetPreviousMouseX())*0.005, (ofGetMouseY() - ofGetPreviousMouseY())*0.005 }, // velocity
-      0.05, // radialVelocity
+      0.05*SCALE, // radialVelocity
       ofFloatColor(0.2+ofRandom(0.4), 0.05+ofRandom(0.3), 0.1+ofRandom(0.3), 0.05)*0.1,
       10.0 // temperature
     };
@@ -35,6 +35,7 @@ void ofApp::draw() {
   ofClear(0, 255);
   fluidSimulation.draw(0, 0, ofGetWindowWidth(), ofGetWindowHeight());
   gui.draw();
+  ofSetWindowTitle(ofToString(ofGetFrameRate()));
 }
 
 //--------------------------------------------------------------
