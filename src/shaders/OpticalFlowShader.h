@@ -9,10 +9,12 @@ public:
   void render(float w, float h, const ofFbo& currentFrame_, ofFbo& lastFrame_) {
     ofEnableBlendMode(OF_BLENDMODE_DISABLED);
     shader.begin();
-    setupShaders();
+    shader.setUniform1f("offset", offsetParameter);
+    shader.setUniform1f("threshold", thresholdParameter);
+    shader.setUniform1f("force", forceParameter);
+//    shader.setUniform1f("power", powerParameter);
     shader.setUniformTexture("lastFrame", lastFrame_.getTexture(), 1);
     shader.setUniform2f("texSize", glm::vec2(currentFrame_.getWidth(), currentFrame_.getHeight()));
-    ofSetColor(255);
     currentFrame_.draw(0, 0, w, h);
     shader.end();
   }
@@ -31,12 +33,6 @@ public:
   }
 
 protected:
-  virtual void setupShaders() override {
-    shader.setUniform1f("offset", offsetParameter);
-    shader.setUniform1f("threshold", thresholdParameter);
-    shader.setUniform1f("force", forceParameter);
-//    shader.setUniform1f("power", powerParameter);
-  }
   
   std::string getFragmentShader() override {
     return GLSL(
