@@ -6,14 +6,16 @@
 class MultiplyColorShader : public Shader {
 
 public:
+  void render(const ofBaseDraws& drawable, glm::vec4 multiplyBy) {
+    shader.begin();
+    shader.setUniform4f("multiplyBy", multiplyBy);
+    drawable.draw(0, 0);
+    shader.end();
+  }
+  
   void render(PingPongFbo& fbo_, glm::vec4 multiplyBy) {
     fbo_.getTarget().begin();
-    {
-      shader.begin();
-      shader.setUniform4f("multiplyBy", multiplyBy);
-      fbo_.getSource().draw(0, 0);
-      shader.end();
-    }
+    render(fbo_.getSource(), multiplyBy);
     fbo_.getTarget().end();
     fbo_.swap();
   }
