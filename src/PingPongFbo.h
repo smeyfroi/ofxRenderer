@@ -14,10 +14,20 @@ public:
     getTarget().allocate(width, height, internalFormat_);
   }
   
+  void allocate(ofFboSettings settings) {
+    width = settings.width;
+    height = settings.height;
+    getSource().allocate(settings);
+    getTarget().allocate(settings);
+  }
+  
   ofFbo& getSource() { return fbos[1 - currentIndex]; }
   ofFbo& getTarget() { return fbos[currentIndex]; }
   void swap() { currentIndex = 1 - currentIndex; }
   
+  void draw(float x, float y) const override {
+    fbos[1 - currentIndex].draw(x, y, width, height);
+  }
   void draw(float x, float y, float w, float h) const override {
     fbos[1 - currentIndex].draw(x, y, w, h);
   }
