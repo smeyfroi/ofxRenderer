@@ -22,6 +22,7 @@ public:
 
 protected:
   std::string getFragmentShader() override {
+    if (ofGetUsingArbTex()) { ofLogError() << "MultiplyColorShader requires ofDisableArbTex() during App.setup()"; }
     return GLSL(
                 uniform sampler2D tex0;
                 uniform vec4 multiplyBy;
