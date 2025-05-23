@@ -8,7 +8,7 @@
 #include "SubtractDivergenceShader.h"
 #include "VorticityRenderer.h"
 #include "ApplyVorticityForceShader.h"
-#include "ApplyBouyancyShader.h"
+//#include "ApplyBouyancyShader.h"
 #include "AddImpulseSpotShader.h"
 #include "AddRadialImpulseShader.h"
 
@@ -20,6 +20,8 @@
 // - How to set up dissipation params (e.g. https://github.com/patriciogonzalezvivo/ofxFluid/blob/master/src/ofxFluid.cpp#L291)
 
 
+// TODO: temperature has never worked
+// TODO: bouyancy has never worked
 class FluidSimulation {
   
 public:
@@ -27,23 +29,49 @@ public:
     glm::vec2 position;
     float radius;
     glm::vec2 velocity;
-    float radialVelocity; // applies if velocity == nullptr
+    float radialVelocity; // applies if velocity == nullptr. FIXME: this isn't a ptr!
     ofFloatColor color;
     float colorDensity; // resultant color is `color * colorDensity`
-    float temperature;
+//    float temperature;
   };
+  
+  auto createFboSettings(glm::vec2 size, GLint internalFormat) {
+    ofFboSettings settings { nullptr };
+    settings.wrapModeVertical = GL_REPEAT;
+    settings.wrapModeHorizontal = GL_REPEAT;
+    settings.width = size.x;
+    settings.height = size.y;
+    settings.internalformat = internalFormat;
+    settings.numSamples = 0;
+    settings.useDepth = true;
+    settings.useStencil = true;
+    settings.textureTarget = ofGetUsingArbTex() ? GL_TEXTURE_RECTANGLE_ARB : GL_TEXTURE_2D;
+    return settings;
+  }
+  
+  bool isSetup() { return flowValuesFboPtr && flowVelocitiesFboPtr; }
 
   void setup(glm::vec2 flowValuesSize) {
-    flowValuesFbo.allocate(flowValuesSize.x, flowValuesSize.y, GL_RGBA32F);
-    flowValuesFbo.getSource().begin();
-    ofClear(ofFloatColor(0.0, 0.0, 0.0, 1.0));
-    flowValuesFbo.getSource().end();
+    flowValuesFboPtr = std::make_shared<PingPongFbo>();
+    flowValuesFboPtr->allocate(createFboSettings(flowValuesSize, GL_RGBA32F));
+    flowValuesFboPtr->getSource().clearColorBuffer(ofFloatColor(0.0, 0.0, 0.0, 0.0));
+    
+    flowVelocitiesFboPtr = std::make_shared<PingPongFbo>();
+    flowVelocitiesFboPtr->allocate(createFboSettings(flowValuesSize, GL_RGB32F));
+    flowVelocitiesFboPtr->getSource().clearColorBuffer(ofFloatColor(0.0, 0.0, 0.0, 0.0));
+    
+    setupInternals();
+  }
+  
+  void setup(std::shared_ptr<PingPongFbo> flowValuesFboPtr_, std::shared_ptr<PingPongFbo> flowVelocitiesFboPtr_) {
+    flowValuesFboPtr = flowValuesFboPtr_;
+    flowVelocitiesFboPtr = flowVelocitiesFboPtr_;
+    setupInternals();
+  }
 
-    flowVelocitiesFbo.allocate(flowValuesSize.x, flowValuesSize.y, GL_RGB32F);
-    flowVelocitiesFbo.getSource().begin();
-    ofClear(ofFloatColor(0.0, 0.0, 0.0, 0.0));
-    flowVelocitiesFbo.getSource().end();
-
+  void setupInternals() {
+    auto flowValuesSize = flowValuesFboPtr->getSize();
+    
     valueAdvectShader.load();
     velocityAdvectShader.load();
     
@@ -62,11 +90,11 @@ public:
     vorticityRenderer.load();
     applyVorticityForceShader.load();
 
-    temperaturesFbo.allocate(flowValuesSize.x, flowValuesSize.y, GL_RGB32F);
-    temperaturesFbo.getSource().begin();
-    ofClear(ofFloatColor(ambientTemperatureParameter));
-    temperaturesFbo.getSource().end();
-    applyBouyancyShader.load();
+//    temperaturesFbo.allocate(flowValuesSize.x, flowValuesSize.y, GL_RGB32F);
+//    temperaturesFbo.getSource().begin();
+//    ofClear(ofFloatColor(ambientTemperatureParameter));
+//    temperaturesFbo.getSource().end();
+//    applyBouyancyShader.load();
     
     addImpulseSpotShader.load();
     addRadialImpulseShader.load();
@@ -81,67 +109,67 @@ public:
       parameters.add(vorticityParameter);
       parameters.add(valueAdvectDissipationParameter);
       parameters.add(velocityAdvectDissipationParameter);
-      parameters.add(temperatureAdvectDissipationParameter);
+//      parameters.add(temperatureAdvectDissipationParameter);
 //      parameters.add(valueDiffusionIterationsParameter);
 //      parameters.add(velocityDiffusionIterationsParameter);
       parameters.add(pressureDiffusionIterationsParameter);
-      applyBouyancyParameters.add(ambientTemperatureParameter);
-      applyBouyancyParameters.add(smokeBouyancyParameter);
-      applyBouyancyParameters.add(smokeWeightParameter);
-      applyBouyancyParameters.add(gravityForceXParameter);
-      applyBouyancyParameters.add(gravityForceYParameter);
-      parameters.add(applyBouyancyParameters);
+//      applyBouyancyParameters.add(ambientTemperatureParameter);
+//      applyBouyancyParameters.add(smokeBouyancyParameter);
+//      applyBouyancyParameters.add(smokeWeightParameter);
+//      applyBouyancyParameters.add(gravityForceXParameter);
+//      applyBouyancyParameters.add(gravityForceYParameter);
+//      parameters.add(applyBouyancyParameters);
     }
     return parameters;
   }
   
   void update() {
     // advect
-    velocityAdvectShader.render(flowVelocitiesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter, velocityAdvectDissipationParameter);
-    temperaturesAdvectShader.render(temperaturesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter, temperatureAdvectDissipationParameter);
-    valueAdvectShader.render(flowValuesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter, valueAdvectDissipationParameter);
+    velocityAdvectShader.render(*flowVelocitiesFboPtr, flowVelocitiesFboPtr->getSource().getTexture(), dtParameter, velocityAdvectDissipationParameter);
+//    temperaturesAdvectShader.render(temperaturesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter, temperatureAdvectDissipationParameter);
+    valueAdvectShader.render(*flowValuesFboPtr, flowVelocitiesFboPtr->getSource().getTexture(), dtParameter, valueAdvectDissipationParameter);
     
-    applyBouyancyShader.render(flowVelocitiesFbo, temperaturesFbo, flowValuesFbo, dtParameter, ambientTemperatureParameter, smokeBouyancyParameter, smokeWeightParameter, gravityForceXParameter, gravityForceYParameter);
+//    applyBouyancyShader.render(flowVelocitiesFbo, temperaturesFbo, flowValuesFbo, dtParameter, ambientTemperatureParameter, smokeBouyancyParameter, smokeWeightParameter, gravityForceXParameter, gravityForceYParameter);
 
     // diffuse
 //    velocityJacobiShader.render(flowVelocitiesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter, 1.0E-3, 0.25, velocityDiffusionIterationsParameter);
 //    valueJacobiShader.render(flowValuesFbo, flowValuesFbo.getSource().getTexture(), dtParameter, -1.0E-3, 0.25, valueDiffusionIterationsParameter);
     
     // add forces
-    vorticityRenderer.render(flowVelocitiesFbo.getSource());
-    applyVorticityForceShader.render(flowVelocitiesFbo, vorticityRenderer.getFbo(), vorticityParameter, dtParameter);
+    vorticityRenderer.render(flowVelocitiesFboPtr->getSource());
+    applyVorticityForceShader.render(*flowVelocitiesFboPtr, vorticityRenderer.getFbo(), vorticityParameter, dtParameter);
 
     // compute
-    divergenceRenderer.render(flowVelocitiesFbo.getSource());
+    divergenceRenderer.render(flowVelocitiesFboPtr->getSource());
     pressuresFbo.getSource().begin();
     ofClear(0, 0, 0);
     pressuresFbo.getSource().end();
     pressureJacobiShader.render(pressuresFbo, divergenceRenderer.getFbo().getTexture(), dtParameter, -1.0, 0.25, pressureDiffusionIterationsParameter); // alpha should be -cellSize * cellSize
-    subtractDivergenceShader.render(flowVelocitiesFbo, pressuresFbo.getSource());
+    subtractDivergenceShader.render(*flowVelocitiesFboPtr, pressuresFbo.getSource());
   }
   
   void draw(float x, float y, float w, float h) {
     ofPushView();
     ofBlendMode(OF_BLENDMODE_ALPHA);
     ofSetFloatColor(1.0, 1.0, 1.0, 1.0);
-    flowValuesFbo.draw(x, y, w, h);
+    flowValuesFboPtr->draw(x, y, w, h);
     ofPopView();
   }
 
-  PingPongFbo& getFlowValuesFbo() { return flowValuesFbo; }
-  PingPongFbo& getFlowVelocitiesFbo() { return flowVelocitiesFbo; }
-  PingPongFbo& getTemperaturesFbo() { return temperaturesFbo; }
+  PingPongFbo& getFlowValuesFbo() { return *flowValuesFboPtr; }
+  PingPongFbo& getFlowVelocitiesFbo() { return *flowVelocitiesFboPtr; }
+//  PingPongFbo& getTemperaturesFbo() { return temperaturesFbo; }
   
   void applyImpulse(const FluidSimulation::Impulse& impulse) {
     glm::vec4 colorValue { impulse.color.r, impulse.color.g, impulse.color.b, impulse.color.a };
-    addImpulseSpotShader.render(flowValuesFbo, impulse.position, impulse.radius, colorValue);
+    addImpulseSpotShader.render(*flowValuesFboPtr, impulse.position, impulse.radius, colorValue);
 
-    addRadialImpulseShader.render(flowVelocitiesFbo, impulse.position, impulse.radius, impulse.radialVelocity);
+    addRadialImpulseShader.render(*flowVelocitiesFboPtr, impulse.position, impulse.radius, impulse.radialVelocity);
     glm::vec4 velocityValue { impulse.velocity.r, impulse.velocity.g, 0.0, 0.0 };
 //    addImpulseSpotShader.render(flowVelocitiesFbo, impulse.position, impulse.radius, velocityValue);
     
-    glm::vec4 temperatureValue { impulse.temperature, 0.0, 0.0, 0.0 };
-    addImpulseSpotShader.render(temperaturesFbo, impulse.position, impulse.radius, temperatureValue);
+//    glm::vec4 temperatureValue { impulse.temperature, 0.0, 0.0, 0.0 };
+//    addImpulseSpotShader.render(temperaturesFbo, impulse.position, impulse.radius, temperatureValue);
   }
   
 private:
@@ -156,19 +184,19 @@ private:
   ofParameter<int> valueDiffusionIterationsParameter = JacobiShader::createIterationsParameter("value:");
   ofParameter<int> velocityDiffusionIterationsParameter = JacobiShader::createIterationsParameter("velocity:");
   ofParameter<int> pressureDiffusionIterationsParameter = JacobiShader::createIterationsParameter("pressure:", 30);
-  ofParameterGroup applyBouyancyParameters { "Bouyancy" };
-  ofParameter<float> ambientTemperatureParameter = ApplyBouyancyShader::createAmbientTemperatureParameter();
-  ofParameter<float> smokeBouyancyParameter = ApplyBouyancyShader::createSmokeBouyancyParameter();
-  ofParameter<float> smokeWeightParameter = ApplyBouyancyShader::createSmokeWeightParameter();
-  ofParameter<float> gravityForceXParameter = ApplyBouyancyShader::createGravityForceXParameter();
-  ofParameter<float> gravityForceYParameter = ApplyBouyancyShader::createGravityForceYParameter();
+//  ofParameterGroup applyBouyancyParameters { "Bouyancy" };
+//  ofParameter<float> ambientTemperatureParameter = ApplyBouyancyShader::createAmbientTemperatureParameter();
+//  ofParameter<float> smokeBouyancyParameter = ApplyBouyancyShader::createSmokeBouyancyParameter();
+//  ofParameter<float> smokeWeightParameter = ApplyBouyancyShader::createSmokeWeightParameter();
+//  ofParameter<float> gravityForceXParameter = ApplyBouyancyShader::createGravityForceXParameter();
+//  ofParameter<float> gravityForceYParameter = ApplyBouyancyShader::createGravityForceYParameter();
 
-  PingPongFbo flowValuesFbo;
-  PingPongFbo flowVelocitiesFbo;
-  PingPongFbo temperaturesFbo;
+  std::shared_ptr<PingPongFbo> flowValuesFboPtr;
+  std::shared_ptr<PingPongFbo> flowVelocitiesFboPtr;
+//  PingPongFbo temperaturesFbo;
   AdvectShader valueAdvectShader;
   AdvectShader velocityAdvectShader;
-  AdvectShader temperaturesAdvectShader;
+//  AdvectShader temperaturesAdvectShader;
   JacobiShader valueJacobiShader;
   JacobiShader velocityJacobiShader;
   DivergenceRenderer divergenceRenderer;
@@ -177,7 +205,7 @@ private:
   SubtractDivergenceShader subtractDivergenceShader;
   VorticityRenderer vorticityRenderer;
   ApplyVorticityForceShader applyVorticityForceShader;
-  ApplyBouyancyShader applyBouyancyShader;
+//  ApplyBouyancyShader applyBouyancyShader;
   
   AddImpulseSpotShader addImpulseSpotShader;
   AddRadialImpulseShader addRadialImpulseShader;
