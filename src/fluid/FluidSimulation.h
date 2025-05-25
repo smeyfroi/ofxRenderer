@@ -160,6 +160,7 @@ public:
   PingPongFbo& getFlowVelocitiesFbo() { return *flowVelocitiesFboPtr; }
 //  PingPongFbo& getTemperaturesFbo() { return temperaturesFbo; }
   
+  // NOTE: this is not used by the MarkSynth Fluid wrapper; it has dedicated Mods instead
   void applyImpulse(const FluidSimulation::Impulse& impulse) {
     glm::vec4 colorValue { impulse.color.r, impulse.color.g, impulse.color.b, impulse.color.a };
     addImpulseSpotShader.render(*flowValuesFboPtr, impulse.position, impulse.radius, colorValue);

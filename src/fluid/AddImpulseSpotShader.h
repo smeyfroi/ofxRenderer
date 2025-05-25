@@ -2,6 +2,7 @@
 
 #include "Shader.h"
 
+// Draw a circle that fades towards its edge
 class AddImpulseSpotShader : public Shader {
 
 public:
@@ -33,7 +34,13 @@ protected:
                   vec2 xy = gl_TexCoord[0].st;
                   vec4 oldValue = texture2D(tex0, xy);
                   float fade = 1.0 - smoothstep(0, radius, distance(position, xy * texSize));
-                  gl_FragColor = oldValue + (value * fade);
+                  vec4 newValue = (value * fade) + oldValue;
+//                  gl_FragColor = newValue; // unclamped
+
+                  // clamped
+                  newValue = float(all(lessThanEqual(vec3(newValue), vec3(1.0)))) * (value * fade) + oldValue;
+                  newValue.a = min(newValue.a, 1.0);
+                  gl_FragColor = newValue;
                 }
                 );
   }
