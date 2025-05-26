@@ -43,7 +43,6 @@ protected:
                   float positiveAlpha = texture2D(mask, xy).r;
                   float negativeAlpha = 1.0 - positiveAlpha;
                   float maskAlpha = (invert*negativeAlpha) + ((1.0-invert)*positiveAlpha);
-//                  gl_FragColor = gl_Color * vec4(foregroundColor.rgb, maskAlpha); // * foregroundColor.a);
                   gl_FragColor = gl_Color * vec4(foregroundColor.rgb, maskAlpha * foregroundColor.a);
                 }
                 );
