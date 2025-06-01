@@ -39,10 +39,18 @@ protected:
 
                   vec4 e = vec4(2.718);
                   vec4 epsilon = vec4(0.01);
+
+                  // SCALED TO [-1.0, 1.0]
                   gl_FragColor = mix(color,
                                      1.0 - pow(e, -clampFactor*color),
                                      step(epsilon, clampFactor)
                                      );
+
+                  // SCALE to [0.0, 0.0]
+//                  gl_FragColor = mix(color,
+//                                     1.0 - pow(e, -clampFactor*color),
+//                                     step(epsilon, clampFactor)
+//                                     ) * 0.5 + 0.5;
                 }
                 );
   }

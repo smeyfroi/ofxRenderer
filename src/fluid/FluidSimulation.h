@@ -150,7 +150,8 @@ public:
   
   void draw(float x, float y, float w, float h) {
     ofPushView();
-    ofBlendMode(OF_BLENDMODE_ALPHA);
+//    ofBlendMode(OF_BLENDMODE_ALPHA);
+    ofBlendMode(OF_BLENDMODE_ADD);
     ofSetFloatColor(1.0, 1.0, 1.0, 1.0);
     flowValuesFboPtr->draw(x, y, w, h);
     ofPopView();

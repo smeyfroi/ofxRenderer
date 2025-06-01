@@ -8,6 +8,17 @@
 class AddTextureShader : public Shader {
 
 public:
+  void render(PingPongFbo& fbo_, const ofTexture& addedTexture_, float multiplier_) {
+    fbo_.getTarget().begin();
+    shader.begin();
+    shader.setUniformTexture("addedTexture", addedTexture_, 1);
+    shader.setUniform1f("multiplier", multiplier_);
+    fbo_.getSource().draw(0, 0);
+    shader.end();
+    fbo_.getTarget().end();
+    fbo_.swap();
+  }
+  
   void render(PingPongFbo& fbo_, const ofFbo& addedTexture_, float multiplier_) {
     fbo_.getTarget().begin();
     shader.begin();
