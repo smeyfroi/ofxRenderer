@@ -1,4 +1,5 @@
 #include "ofApp.h"
+//#include "OpenGLTimer.h"
 
 //--------------------------------------------------------------
 void ofApp::setup(){
@@ -8,12 +9,10 @@ void ofApp::setup(){
   fbo.allocate(ofGetWindowWidth(), ofGetWindowHeight(), GL_RGBA32F);
   fbo.getSource().clearColorBuffer(ofFloatColor(0.0, 0.0, 0.0, 0.0));
 
-  multiplyColorShader.load();
-  logisticFnShader.load();
-  translateShader.load();
+//  fadeEffect.load();
+  translateEffect.load();
   
-  parameters.add(multiplyAmountParameter);
-  parameters.add(clampFactorParameter);
+  parameters.add(fadeAmountParameter);
   parameters.add(translateByParameter);
   gui.setup(parameters);
 }
@@ -22,15 +21,18 @@ void ofApp::setup(){
 void ofApp::update() {
   fbo.getSource().begin();
   {
-    ofEnableBlendMode(OF_BLENDMODE_ALPHA);
+    ofEnableBlendMode(OF_BLENDMODE_DISABLED);
     ofSetColor(ofFloatColor(ofRandom(1.0), ofRandom(1.0), ofRandom(1.0), 1.0));
     ofDrawCircle(ofRandomWidth(), ofRandomHeight(), 20.0);
+    
+//    fadeEffect.fadeAmount = fadeAmountParameter;
+//    fadeEffect.draw();
   }
   fbo.getSource().end();
 
-  multiplyColorShader.render(fbo, glm::vec4 { 1.0, 1.0, 1.0, multiplyAmountParameter });
-  logisticFnShader.render(fbo, glm::vec4 { 0.0, 0.0, 0.0, clampFactorParameter });
-  translateShader.render(fbo, translateByParameter);
+  translateEffect.translateBy = translateByParameter;
+  translateEffect.alpha = 1.0 - fadeAmountParameter;
+  translateEffect.draw(fbo);
 }
 
 //--------------------------------------------------------------

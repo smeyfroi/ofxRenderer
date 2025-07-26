@@ -1,11 +1,10 @@
 #include "ofApp.h"
 
-int main(){
-	// this kicks off the running of my app
-	// can be OF_WINDOW or OF_FULLSCREEN
-	// pass in width and height too:
+int main() {
+  ofGLWindowSettings settings;
+  settings.setGLVersion(4, 1); // macOS supports up to OpenGL 4.1
+  settings.setSize(1024, 768);
+  ofCreateWindow(settings);
 
-	ofSetupOpenGL(1024, 768, OF_WINDOW);
-
-	ofRunApp(new ofApp());
+  ofRunApp(new ofApp());
 }
