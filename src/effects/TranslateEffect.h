@@ -14,12 +14,11 @@ public:
   void draw(PingPongFbo& fbo) {
     fbo.getTarget().begin();
     {
+      ofClear(0, 255);
       ofEnableBlendMode(OF_BLENDMODE_ALPHA);
       ofSetColor(ofFloatColor {1.0, 1.0, 1.0, alpha });
-      ofPushMatrix();
-      ofTranslate(translateBy * glm::vec2 { ofGetWidth(), ofGetHeight() });
-      fbo.getSource().draw(0, 0, ofGetWidth(), ofGetHeight());
-      ofPopMatrix();
+      glm::vec2 pos = translateBy * glm::vec2 { fbo.getSource().getHeight(), fbo.getSource().getHeight() };
+      fbo.getSource().draw(pos);
     }
     fbo.getTarget().end();
     fbo.swap();
