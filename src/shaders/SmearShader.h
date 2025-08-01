@@ -13,6 +13,7 @@ class SmearShader : public Shader {
 
 public:
   void render(PingPongFbo& fbo_, glm::vec2 translateBy_, float alpha_) {
+    ofEnableBlendMode(OF_BLENDMODE_ALPHA);
     fbo_.getTarget().begin();
     {
       shader.begin();
@@ -26,20 +27,35 @@ public:
   }
 
 protected:
+  std::string getVertexShader() override {
+    return GLSL(
+                uniform mat4 modelViewProjectionMatrix;
+
+                in vec4 position;
+                in vec2 texcoord;
+
+                out vec2 texCoordVarying;
+
+                void main() {
+                  gl_Position = modelViewProjectionMatrix * position;
+                  texCoordVarying = texcoord;
+                }
+    );
+  }
+
   std::string getFragmentShader() override {
     return GLSL(
                 uniform sampler2D tex0;
                 uniform vec2 translateBy;
                 uniform float alpha;
+                in vec2 texCoordVarying;
+                out vec4 fragColor;
 
                 void main() {
-                  vec2 xy = gl_TexCoord[0].st;
-                  vec4 smearColor = texture2D(tex0, xy - translateBy);
-                  vec4 existingColor = texture2D(tex0, xy);
-                  gl_FragColor = mix(existingColor, smearColor, alpha);
+                  vec4 smearColor = texture(tex0, texCoordVarying - translateBy);
+                  vec4 existingColor = texture(tex0, texCoordVarying);
+                  fragColor = mix(existingColor, smearColor, alpha);
                 }
                 );
   }
-  
-private:
 };

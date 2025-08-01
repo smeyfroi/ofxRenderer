@@ -3,7 +3,8 @@
 #include "ofMain.h"
 #include "PingPongFbo.h"
 
-#define GLSL(shader) "OF_GLSL_SHADER_HEADER\n" #shader
+#define GLSL(shader) "#version 300 es\nprecision mediump float;\n" #shader
+//#define GLSL(shader) "#version 410\n" #shader
 
 // Manage vertex/fragment shaders, rendering them onto a drawable in some way
 class Shader {
@@ -56,30 +57,31 @@ protected:
 
   virtual std::string getVertexShader() {
     return GLSL(
-                uniform mat4 modelViewProjectionMatrix;
+                uniform mat4 modelViewMatrix;
+                uniform mat4 projectionMatrix;
                 in vec4 position;
                 in vec2 texcoord;
-                in vec4 color;
+//                in vec4 color;
                 out vec2 texCoordVarying;
-                out vec4 colorVarying;
+//                out vec4 colorVarying;
 
                 void main() {
-                  gl_Position = modelViewProjectionMatrix * position;
+                  gl_Position = projectionMatrix * modelViewMatrix * position;
                   texCoordVarying = texcoord;
-                  colorVarying = color;
+//                  colorVarying = color;
                 }
     );
   }
 
   virtual std::string getFragmentShader() {
     return GLSL(
-//                uniform sampler2DRect tex0;
+                uniform sampler2D tex0;
                 in vec2 texCoordVarying;
-                in vec2 colorVarying;
+//                in vec4 colorVarying;
                 out vec4 outputColor;
 
                 void main(void) {
-                  outputColor = vec4(texCoordVarying, 0.0, 1.0);
+                  outputColor = vec4(1.0, 0.0, 0.0, 1.0);
 //                  outputColor = texture(tex0, texCoordVarying);
                 }
     );
