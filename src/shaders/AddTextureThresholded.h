@@ -27,27 +27,26 @@ public:
 protected:
 
   std::string getFragmentShader() override {
-    return GLSL(
-                uniform sampler2D tex0;
-                uniform sampler2D addedTexture;
-                uniform float threshold;
+    return R"(
+      uniform sampler2D tex0;
+      uniform sampler2D addedTexture;
+      uniform float threshold;
 
-                void main() {
-                  vec2 xy = gl_TexCoord[0].st;
-                  vec4 color = texture2D(tex0, xy);
-                  vec4 addedColor = texture2D(addedTexture, xy);
-                  
-                  vec4 potentialColor = color + addedColor;
-                  float r_exceeds = step(threshold, potentialColor.r);
-                  float g_exceeds = step(threshold, potentialColor.g);
-                  float b_exceeds = step(threshold, potentialColor.b);
-                  float any_exceeds = max(r_exceeds, max(g_exceeds, b_exceeds));
+      void main() {
+        vec2 xy = gl_TexCoord[0].st;
+        vec4 color = texture2D(tex0, xy);
+        vec4 addedColor = texture2D(addedTexture, xy);
+        
+        vec4 potentialColor = color + addedColor;
+        float r_exceeds = step(threshold, potentialColor.r);
+        float g_exceeds = step(threshold, potentialColor.g);
+        float b_exceeds = step(threshold, potentialColor.b);
+        float any_exceeds = max(r_exceeds, max(g_exceeds, b_exceeds));
 
-                  float a = clamp(potentialColor.a, 0.0, 1.0); // could treat this same as rgb?
-                  
-                  vec4 thresholdedColor = mix(potentialColor, color, any_exceeds);
-                  gl_FragColor = vec4(thresholdedColor.rgb, clamp(thresholdedColor.a, 0.0, 1.0));
-                }
-                );
+        vec4 thresholdedColor = mix(potentialColor, color, any_exceeds);
+//      gl_FragColor = thresholdedColor;
+        gl_FragColor = vec4(thresholdedColor.rgb, clamp(thresholdedColor.a, 0.0, 1.0));
+      }
+    )";
   }
 };
