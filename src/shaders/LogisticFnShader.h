@@ -7,6 +7,7 @@ class LogisticFnShader : public Shader {
 
 public:
   void render(const ofBaseDraws& drawable, glm::vec4 clampFactor) {
+    ofEnableBlendMode(OF_BLENDMODE_ALPHA);
     shader.begin();
     shader.setUniform4f("clampFactor", clampFactor);
     drawable.draw(0, 0);
@@ -27,31 +28,23 @@ protected:
   std::string getFragmentShader() override {
     return GLSL(
                 uniform sampler2D tex0;
+                in vec2 texCoordVarying;
+                in vec2 colorVarying;
+                out vec4 outputColor;
                 uniform vec4 clampFactor;
 
-                void main() {
-                  vec2 xy = gl_TexCoord[0].st;
-                  vec4 color = texture2D(tex0, xy);
+                void main(void) {
+                  vec4 color = texture(tex0, texCoordVarying);
                   
-//                  float e = 2.718;
-//                  float x1 = 1.0 - pow(e, -clampFactor*xy.x); // logistic function
-//                  gl_FragColor = vec4(x1, xy.y, 0.0, 1.0);
-
                   vec4 e = vec4(2.718);
                   vec4 epsilon = vec4(0.01);
-
-                  // SCALED TO [-1.0, 1.0]
-                  gl_FragColor = mix(color,
-                                     1.0 - pow(e, -clampFactor*color),
-                                     step(epsilon, clampFactor)
-                                     );
-
-                  // SCALE to [0.0, 0.0]
-//                  gl_FragColor = mix(color,
-//                                     1.0 - pow(e, -clampFactor*color),
-//                                     step(epsilon, clampFactor)
-//                                     ) * 0.5 + 0.5;
+                  
+                  // SCALED TO [0.0, 1.0]
+                  outputColor = mix(color,
+                                    1.0 - pow(e, -clampFactor*color),
+                                    step(epsilon, clampFactor)
+                                    ) * 0.5 + 0.5;
                 }
-                );
+    );
   }
 };

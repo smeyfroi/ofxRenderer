@@ -19,11 +19,18 @@
 // NOTES:
 // - How to set up dissipation params (e.g. https://github.com/patriciogonzalezvivo/ofxFluid/blob/master/src/ofxFluid.cpp#L291)
 
-
 // TODO: temperature has never worked
 // TODO: bouyancy has never worked
 class FluidSimulation {
   
+#ifndef TARGET_OS_IOS
+const GLint FLOAT_A_MODE = GL_RGBA32F;
+const GLint FLOAT_MODE = GL_RGB32F;
+#else
+const GLint FLOAT_A_MODE = GL_RGBA16F;
+const GLint FLOAT_MODE = GL_RGB16F;
+#endif
+
 public:
   struct Impulse {
     glm::vec2 position;
@@ -45,21 +52,25 @@ public:
     settings.numSamples = 0;
     settings.useDepth = true;
     settings.useStencil = true;
-    settings.textureTarget = ofGetUsingArbTex() ? GL_TEXTURE_RECTANGLE_ARB : GL_TEXTURE_2D;
+//    settings.textureTarget = ofGetUsingArbTex() ? GL_TEXTURE_RECTANGLE_ARB : GL_TEXTURE_2D;
     return settings;
   }
   
   bool isSetup() { return flowValuesFboPtr && flowVelocitiesFboPtr; }
 
-  void setup(glm::vec2 flowValuesSize) {
+void setup(glm::vec2 flowValuesSize) {
     flowValuesFboPtr = std::make_shared<PingPongFbo>();
-    flowValuesFboPtr->allocate(createFboSettings(flowValuesSize, GL_RGBA32F));
-    flowValuesFboPtr->getSource().clearColorBuffer(ofFloatColor(0.0, 0.0, 0.0, 0.0));
+    flowValuesFboPtr->allocate(createFboSettings(flowValuesSize, FLOAT_A_MODE));
+//    flowValuesFboPtr->getSource().clearColorBuffer(ofFloatColor(0.0, 0.0, 0.0, 0.0));
+    ofBackground(ofFloatColor(0.0, 0.0, 0.0, 0.0));
+    flowValuesFboPtr->getSource().clear();
     
     flowVelocitiesFboPtr = std::make_shared<PingPongFbo>();
-    flowVelocitiesFboPtr->allocate(createFboSettings(flowValuesSize, GL_RGB32F));
-    flowVelocitiesFboPtr->getSource().clearColorBuffer(ofFloatColor(0.0, 0.0, 0.0, 0.0));
-    
+    flowVelocitiesFboPtr->allocate(createFboSettings(flowValuesSize, FLOAT_MODE));
+//    flowVelocitiesFboPtr->getSource().clearColorBuffer(ofFloatColor(0.0, 0.0, 0.0, 0.0));
+    ofBackground(ofFloatColor(0.0, 0.0, 0.0, 0.0));
+    flowVelocitiesFboPtr->getSource().clear();
+
     setupInternals();
   }
   

@@ -27,7 +27,7 @@ public:
     fbo_.getTarget().end();
     fbo_.swap();
   }
-
+  
 protected:
   std::string getFragmentShader() override {
     if (ofGetUsingArbTex()) { ofLogError() << "MultiplyColorShader requires ofDisableArbTex() during App.setup()"; }
