@@ -57,8 +57,7 @@ protected:
 
   virtual std::string getVertexShader() {
     return GLSL(
-                uniform mat4 modelViewMatrix;
-                uniform mat4 projectionMatrix;
+                uniform mat4 modelViewProjectionMatrix;
                 in vec4 position;
                 in vec2 texcoord;
 //                in vec4 color;
@@ -66,7 +65,7 @@ protected:
 //                out vec4 colorVarying;
 
                 void main() {
-                  gl_Position = projectionMatrix * modelViewMatrix * position;
+                  gl_Position = modelViewProjectionMatrix * position;
                   texCoordVarying = texcoord;
 //                  colorVarying = color;
                 }
@@ -75,14 +74,14 @@ protected:
 
   virtual std::string getFragmentShader() {
     return GLSL(
-                uniform sampler2D tex0;
+//                uniform sampler2D tex0;
                 in vec2 texCoordVarying;
 //                in vec4 colorVarying;
-                out vec4 outputColor;
+                out vec4 fragColor;
 
                 void main(void) {
-                  outputColor = vec4(1.0, 0.0, 0.0, 1.0);
-//                  outputColor = texture(tex0, texCoordVarying);
+                  fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+//                  fragColor = texture(tex0, texCoordVarying);
                 }
     );
   }
