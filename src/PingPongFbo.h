@@ -26,10 +26,10 @@ public:
   void swap() { currentIndex = 1 - currentIndex; }
   
   void draw(float x, float y) const override {
-    fbos[1 - currentIndex].draw(x, y, width, height);
+    draw(x, y, width, height);
   }
   void draw(float x, float y, float w, float h) const override {
-    fbos[1 - currentIndex].draw(x, y, w, h);
+    fbos[1 - currentIndex].draw(x, y, w, h); // workaround inherited getSource non-constness
   }
   
   float getWidth() const override { return width; }
