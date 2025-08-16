@@ -27,22 +27,6 @@ public:
   }
 
 protected:
-  std::string getVertexShader() override {
-    return GLSL(
-                uniform mat4 modelViewProjectionMatrix;
-
-                in vec4 position;
-                in vec2 texcoord;
-
-                out vec2 texCoordVarying;
-
-                void main() {
-                  gl_Position = modelViewProjectionMatrix * position;
-                  texCoordVarying = texcoord;
-                }
-    );
-  }
-
   std::string getFragmentShader() override {
     return GLSL(
                 uniform sampler2D tex0;
