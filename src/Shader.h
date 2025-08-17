@@ -3,8 +3,8 @@
 #include "ofMain.h"
 #include "PingPongFbo.h"
 
-#define GLSL(shader) "#version 300 es\nprecision mediump float;\n" #shader
-//#define GLSL(shader) "#version 410\n" #shader
+//#define GLSL(shader) "#version 300 es\nprecision mediump float;\n" #shader
+#define GLSL(shader) "#version 410\n" #shader
 
 // Manage vertex/fragment shaders, rendering them onto a drawable in some way
 class Shader {
@@ -60,14 +60,14 @@ protected:
                 uniform mat4 modelViewProjectionMatrix;
                 in vec4 position;
                 in vec2 texcoord;
-//                in vec4 color;
+                in vec4 color;
                 out vec2 texCoordVarying;
-//                out vec4 colorVarying;
+                out vec4 colorVarying;
 
                 void main() {
                   gl_Position = modelViewProjectionMatrix * position;
                   texCoordVarying = texcoord;
-//                  colorVarying = color;
+                  colorVarying = color;
                 }
     );
   }
@@ -76,7 +76,7 @@ protected:
     return GLSL(
 //                uniform sampler2D tex0;
                 in vec2 texCoordVarying;
-//                in vec4 colorVarying;
+                in vec4 colorVarying;
                 out vec4 fragColor;
 
                 void main(void) {
