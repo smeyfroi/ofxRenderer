@@ -12,13 +12,14 @@
 class SmearShader : public Shader {
 
 public:
-  void render(PingPongFbo& fbo_, glm::vec2 translateBy_, float alpha_) {
+  void render(PingPongFbo& fbo_, glm::vec2 translateBy_, float mixNew_, float fadeMultiplier_ = 1.0) {
     ofEnableBlendMode(OF_BLENDMODE_ALPHA);
     fbo_.getTarget().begin();
     {
       shader.begin();
       shader.setUniform2f("translateBy", translateBy_);
-      shader.setUniform1f("alpha", alpha_);
+      shader.setUniform1f("mixNew", mixNew_);
+      shader.setUniform1f("fadeMultiplier", fadeMultiplier_);
       fbo_.getSource().draw(0, 0);
       shader.end();
     }
@@ -31,14 +32,16 @@ protected:
     return GLSL(
                 uniform sampler2D tex0;
                 uniform vec2 translateBy;
-                uniform float alpha;
+                uniform float mixNew;
+                uniform float fadeMultiplier;
                 in vec2 texCoordVarying;
                 out vec4 fragColor;
 
                 void main() {
                   vec4 smearColor = texture(tex0, texCoordVarying - translateBy);
                   vec4 existingColor = texture(tex0, texCoordVarying);
-                  fragColor = mix(existingColor, smearColor, alpha);
+                  fragColor = mix(existingColor, smearColor, mixNew);
+                  fragColor.a *= fadeMultiplier;
                 }
                 );
   }
