@@ -6,14 +6,14 @@ void ofApp::setup(){
   ofEnableAlphaBlending();
   ofDisableArbTex();
   
-  fbo.allocate(ofGetWindowWidth(), ofGetWindowHeight(), GL_RGBA32F);
+  fbo.allocate(ofGetWindowWidth(), ofGetWindowHeight(), GL_RGBA16F);
   fbo.getSource().clearColorBuffer(ofFloatColor(0.0, 0.0, 0.0, 0.0));
 
-//  fadeEffect.load();
-  translateEffect.load();
+  fadeEffect.load();
+//  translateEffect.load();
   
   parameters.add(fadeAmountParameter);
-  parameters.add(translateByParameter);
+//  parameters.add(translateByParameter);
   gui.setup(parameters);
 }
 
@@ -25,14 +25,14 @@ void ofApp::update() {
     ofSetColor(ofFloatColor(ofRandom(1.0), ofRandom(1.0), ofRandom(1.0), 1.0));
     ofDrawCircle(ofRandomWidth(), ofRandomHeight(), 20.0);
     
-//    fadeEffect.fadeAmount = fadeAmountParameter;
-//    fadeEffect.draw();
+    fadeEffect.fadeAmount = fadeAmountParameter;
+    fadeEffect.draw(ofGetWindowWidth(), ofGetWindowHeight());
   }
   fbo.getSource().end();
 
-  translateEffect.translateBy = translateByParameter;
-  translateEffect.alpha = 1.0 - fadeAmountParameter;
-  translateEffect.draw(fbo);
+//  translateEffect.translateBy = translateByParameter;
+//  translateEffect.alpha = 1.0 - fadeAmountParameter;
+//  translateEffect.draw(fbo);
 }
 
 //--------------------------------------------------------------

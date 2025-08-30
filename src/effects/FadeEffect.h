@@ -6,7 +6,7 @@ public:
 
   void draw(float w, float h) {
     ofEnableBlendMode(OF_BLENDMODE_ALPHA);
-    ofSetColor(ofFloatColor {0.0, 0.0, 0.0, fadeAmount });
+    ofSetColor(ofFloatColor { 0.0, 0.0, 0.0, fadeAmount });
     ofFill();
     ofDrawRectangle(0, 0, w, h);
   }
