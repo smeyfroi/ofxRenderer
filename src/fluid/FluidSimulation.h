@@ -9,8 +9,8 @@
 #include "VorticityRenderer.h"
 #include "ApplyVorticityForceShader.h"
 //#include "ApplyBouyancyShader.h"
-#include "AddImpulseSpotShader.h"
 #include "AddRadialImpulseShader.h"
+#include "SoftCircleShader.h"
 
 // https://developer.nvidia.com/gpugems/gpugems/part-vi-beyond-triangles/chapter-38-fast-fluid-dynamics-simulation-gpu
 // https://github.com/patriciogonzalezvivo/ofxFluid
@@ -43,33 +43,33 @@ public:
   };
   
   auto createFboSettings(glm::vec2 size, GLint internalFormat) {
-    ofFboSettings settings { nullptr };
+    ofFboSettings settings;
     settings.wrapModeVertical = GL_REPEAT;
     settings.wrapModeHorizontal = GL_REPEAT;
     settings.width = size.x;
     settings.height = size.y;
     settings.internalformat = internalFormat;
     settings.numSamples = 0;
-    settings.useDepth = true;
-    settings.useStencil = true;
+    settings.useDepth = false;
+    settings.useStencil = false;
 //    settings.textureTarget = ofGetUsingArbTex() ? GL_TEXTURE_RECTANGLE_ARB : GL_TEXTURE_2D;
     return settings;
   }
   
   bool isSetup() { return flowValuesFboPtr && flowVelocitiesFboPtr; }
 
-void setup(glm::vec2 flowValuesSize) {
+  void setup(glm::vec2 flowValuesSize) {
     flowValuesFboPtr = std::make_shared<PingPongFbo>();
     flowValuesFboPtr->allocate(createFboSettings(flowValuesSize, FLOAT_A_MODE));
-//    flowValuesFboPtr->getSource().clearColorBuffer(ofFloatColor(0.0, 0.0, 0.0, 0.0));
-    ofBackground(ofFloatColor(0.0, 0.0, 0.0, 0.0));
-    flowValuesFboPtr->getSource().clear();
-    
+    flowValuesFboPtr->getSource().begin();
+    flowValuesFboPtr->getSource().clearColorBuffer(ofFloatColor(0.0, 0.0, 0.0, 0.0));
+    flowValuesFboPtr->getSource().end();
+
     flowVelocitiesFboPtr = std::make_shared<PingPongFbo>();
     flowVelocitiesFboPtr->allocate(createFboSettings(flowValuesSize, FLOAT_MODE));
-//    flowVelocitiesFboPtr->getSource().clearColorBuffer(ofFloatColor(0.0, 0.0, 0.0, 0.0));
-    ofBackground(ofFloatColor(0.0, 0.0, 0.0, 0.0));
-    flowVelocitiesFboPtr->getSource().clear();
+    flowVelocitiesFboPtr->getSource().begin();
+    flowVelocitiesFboPtr->getSource().clearColorBuffer(ofFloatColor(0.0, 0.0, 0.0, 0.0));
+    flowVelocitiesFboPtr->getSource().end();
 
     setupInternals();
   }
@@ -107,8 +107,8 @@ void setup(glm::vec2 flowValuesSize) {
 //    temperaturesFbo.getSource().end();
 //    applyBouyancyShader.load();
     
-    addImpulseSpotShader.load();
     addRadialImpulseShader.load();
+    softCircleShader.load();
   }
 
   std::string getParameterGroupName() { return "Fluid Simulation"; }
@@ -121,8 +121,8 @@ void setup(glm::vec2 flowValuesSize) {
       parameters.add(valueAdvectDissipationParameter);
       parameters.add(velocityAdvectDissipationParameter);
 //      parameters.add(temperatureAdvectDissipationParameter);
-//      parameters.add(valueDiffusionIterationsParameter);
-//      parameters.add(velocityDiffusionIterationsParameter);
+      parameters.add(valueDiffusionIterationsParameter);
+      parameters.add(velocityDiffusionIterationsParameter);
       parameters.add(pressureDiffusionIterationsParameter);
 //      applyBouyancyParameters.add(ambientTemperatureParameter);
 //      applyBouyancyParameters.add(smokeBouyancyParameter);
@@ -143,8 +143,8 @@ void setup(glm::vec2 flowValuesSize) {
 //    applyBouyancyShader.render(flowVelocitiesFbo, temperaturesFbo, flowValuesFbo, dtParameter, ambientTemperatureParameter, smokeBouyancyParameter, smokeWeightParameter, gravityForceXParameter, gravityForceYParameter);
 
     // diffuse
-//    velocityJacobiShader.render(flowVelocitiesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter, 1.0E-3, 0.25, velocityDiffusionIterationsParameter);
-//    valueJacobiShader.render(flowValuesFbo, flowValuesFbo.getSource().getTexture(), dtParameter, -1.0E-3, 0.25, valueDiffusionIterationsParameter);
+    velocityJacobiShader.render(*flowVelocitiesFboPtr, flowVelocitiesFboPtr->getSource().getTexture(), dtParameter, 1.0E-3, 0.25, velocityDiffusionIterationsParameter);
+    valueJacobiShader.render(*flowValuesFboPtr, flowValuesFboPtr->getSource().getTexture(), dtParameter, -1.0E-10, 0.25, valueDiffusionIterationsParameter);
     
     // add forces
     vorticityRenderer.render(flowVelocitiesFboPtr->getSource());
@@ -153,19 +153,17 @@ void setup(glm::vec2 flowValuesSize) {
     // compute
     divergenceRenderer.render(flowVelocitiesFboPtr->getSource());
     pressuresFbo.getSource().begin();
-    ofClear(0, 0, 0);
+    pressuresFbo.getSource().clearColorBuffer(ofFloatColor(0.0, 0.0, 0.0, 0.0));
     pressuresFbo.getSource().end();
     pressureJacobiShader.render(pressuresFbo, divergenceRenderer.getFbo().getTexture(), dtParameter, -1.0, 0.25, pressureDiffusionIterationsParameter); // alpha should be -cellSize * cellSize
     subtractDivergenceShader.render(*flowVelocitiesFboPtr, pressuresFbo.getSource());
   }
   
   void draw(float x, float y, float w, float h) {
-    ofPushView();
-//    ofBlendMode(OF_BLENDMODE_ALPHA);
-    ofBlendMode(OF_BLENDMODE_ADD);
+    ofBlendMode(OF_BLENDMODE_ALPHA);
     ofSetFloatColor(1.0, 1.0, 1.0, 1.0);
     flowValuesFboPtr->draw(x, y, w, h);
-    ofPopView();
+//    flowVelocitiesFboPtr->draw(x, y, w, h);
   }
 
   PingPongFbo& getFlowValuesFbo() { return *flowValuesFboPtr; }
@@ -174,12 +172,17 @@ void setup(glm::vec2 flowValuesSize) {
   
   // NOTE: this is not used by the MarkSynth Fluid wrapper; it has dedicated Mods instead
   void applyImpulse(const FluidSimulation::Impulse& impulse) {
-    glm::vec4 colorValue { impulse.color.r, impulse.color.g, impulse.color.b, impulse.color.a };
-    addImpulseSpotShader.render(*flowValuesFboPtr, impulse.position, impulse.radius, colorValue);
+    flowValuesFboPtr->getSource().begin();
+    ofEnableBlendMode(OF_BLENDMODE_ADD);
+    softCircleShader.render(impulse.position, impulse.radius, impulse.color * impulse.colorDensity);
+    flowValuesFboPtr->getSource().end();
 
-    addRadialImpulseShader.render(*flowVelocitiesFboPtr, impulse.position, impulse.radius, impulse.radialVelocity);
-    glm::vec4 velocityValue { impulse.velocity.r, impulse.velocity.g, 0.0, 0.0 };
-//    addImpulseSpotShader.render(flowVelocitiesFbo, impulse.position, impulse.radius, velocityValue);
+    flowVelocitiesFboPtr->getSource().begin();
+    ofEnableBlendMode(OF_BLENDMODE_ADD);
+    addRadialImpulseShader.render(impulse.position, impulse.radius, impulse.radialVelocity);
+//    ofFloatColor velocityValue { impulse.velocity.r, impulse.velocity.g, 0.0, 1.0 };
+//    softCircleShader.render(impulse.position, impulse.radius, velocityValue);
+    flowVelocitiesFboPtr->getSource().end();
     
 //    glm::vec4 temperatureValue { impulse.temperature, 0.0, 0.0, 0.0 };
 //    addImpulseSpotShader.render(temperaturesFbo, impulse.position, impulse.radius, temperatureValue);
@@ -188,15 +191,15 @@ void setup(glm::vec2 flowValuesSize) {
 private:
   ofParameterGroup parameters;
 
-  ofParameter<float> dtParameter { "dt", 0.125, 0.001, 0.5 };
-  ofParameter<float> vorticityParameter { "vorticity", 6.0, 0.00, 30.0 };
+  ofParameter<float> dtParameter { "dt", 0.1, 0.001, 0.5 };
+  ofParameter<float> vorticityParameter { "vorticity", 10.0, 0.00, 30.0 };
   
-  ofParameter<float> valueAdvectDissipationParameter = AdvectShader::createDissipationParameter("value:", 0.998);
+  ofParameter<float> valueAdvectDissipationParameter = AdvectShader::createDissipationParameter("value:", 0.999);
   ofParameter<float> velocityAdvectDissipationParameter = AdvectShader::createDissipationParameter("velocity:", 0.999);
-  ofParameter<float> temperatureAdvectDissipationParameter = AdvectShader::createDissipationParameter("temperature:");
-  ofParameter<int> valueDiffusionIterationsParameter = JacobiShader::createIterationsParameter("value:");
-  ofParameter<int> velocityDiffusionIterationsParameter = JacobiShader::createIterationsParameter("velocity:");
-  ofParameter<int> pressureDiffusionIterationsParameter = JacobiShader::createIterationsParameter("pressure:", 30);
+//  ofParameter<float> temperatureAdvectDissipationParameter = AdvectShader::createDissipationParameter("temperature:");
+  ofParameter<int> valueDiffusionIterationsParameter = JacobiShader::createIterationsParameter("value:", 2);
+  ofParameter<int> velocityDiffusionIterationsParameter = JacobiShader::createIterationsParameter("velocity:", 2);
+  ofParameter<int> pressureDiffusionIterationsParameter = JacobiShader::createIterationsParameter("pressure:", 25);
 //  ofParameterGroup applyBouyancyParameters { "Bouyancy" };
 //  ofParameter<float> ambientTemperatureParameter = ApplyBouyancyShader::createAmbientTemperatureParameter();
 //  ofParameter<float> smokeBouyancyParameter = ApplyBouyancyShader::createSmokeBouyancyParameter();
@@ -220,6 +223,6 @@ private:
   ApplyVorticityForceShader applyVorticityForceShader;
 //  ApplyBouyancyShader applyBouyancyShader;
   
-  AddImpulseSpotShader addImpulseSpotShader;
+  SoftCircleShader softCircleShader;
   AddRadialImpulseShader addRadialImpulseShader;
 };

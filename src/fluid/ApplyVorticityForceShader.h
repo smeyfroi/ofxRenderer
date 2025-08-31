@@ -30,23 +30,25 @@ protected:
                 uniform vec2 texSize;
                 uniform float dt;
                 uniform float vorticityStrength;
+                in vec2 texCoordVarying;
+                out vec4 fragColor;
 
                 void main(){
-                  vec2 xy = gl_TexCoord[0].st;
-                  vec2 oldV = texture2D(tex0, xy).xy;
+                  vec2 xy = texCoordVarying.xy;
+                  vec2 oldV = texture(tex0, xy).xy;
 
                   vec2 off = vec2(1.0, 0.0) / texSize;
-                  float curlN = abs(texture2D(curls, xy+off.yx).x);
-                  float curlS = abs(texture2D(curls, xy-off.yx).x);
-                  float curlE = abs(texture2D(curls, xy+off.xy).x);
-                  float curlW = abs(texture2D(curls, xy-off.xy).x);
-                  float curlC = texture2D(curls, xy).x;
+                  float curlN = abs(texture(curls, xy+off.yx).x);
+                  float curlS = abs(texture(curls, xy-off.yx).x);
+                  float curlE = abs(texture(curls, xy+off.xy).x);
+                  float curlW = abs(texture(curls, xy-off.xy).x);
+                  float curlC = texture(curls, xy).x;
                   
                   vec2 dw = normalize(0.5 * vec2(curlN - curlS, curlE - curlW) + 0.000001) * vec2(-1, 1);
                   
                   vec2 fvc = dw * curlC * dt * vorticityStrength;
 
-                  gl_FragColor = vec4(oldV + fvc, 0.0, 0.0);
+                  fragColor = vec4(oldV + fvc, 0.0, 0.0);
                 }
                 );
   }

@@ -31,6 +31,14 @@ public:
     ofPopMatrix();
   }
   
+  void draw(glm::vec2 position, glm::vec2 size) const {
+    ofPushMatrix();
+    ofTranslate(position + size / 2.0);
+    ofScale(size.x, size.y);
+    mesh.draw();
+    ofPopMatrix();
+  }
+  
 private:
   ofMesh mesh;
 };

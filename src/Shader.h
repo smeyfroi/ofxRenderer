@@ -8,7 +8,7 @@
 
 // Manage vertex/fragment shaders, rendering them onto a drawable in some way
 class Shader {
-
+  
 public:
   Shader() {}
   virtual ~Shader() {}
@@ -84,5 +84,12 @@ protected:
 //                  fragColor = texture(tex0, texCoordVarying);
                 }
     );
+  }
+  
+  static void checkGLError(const std::string& description) {
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR) {
+      ofLogError() << "OpenGL error: " << description << "\n" << error;
+    }
   }
 };

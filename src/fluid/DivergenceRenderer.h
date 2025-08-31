@@ -21,19 +21,21 @@ protected:
     return GLSL(
                 uniform sampler2D tex0; // velocities
                 uniform vec2 texSize;
+                in vec2 texCoordVarying;
+                out vec4 fragColor;
 
                 void main(){
-                  vec2 xy = gl_TexCoord[0].st;
+                  vec2 xy = texCoordVarying.xy;
                   vec2 off = vec2(1.0, 0.0) / texSize;
 
-                  vec2 vN = texture2D(tex0, xy+off.yx).xy;
-                  vec2 vS = texture2D(tex0, xy-off.yx).xy;
-                  vec2 vE = texture2D(tex0, xy+off.xy).xy;
-                  vec2 vW = texture2D(tex0, xy-off.xy).xy;
+                  vec2 vN = texture(tex0, xy+off.yx).xy;
+                  vec2 vS = texture(tex0, xy-off.yx).xy;
+                  vec2 vE = texture(tex0, xy+off.xy).xy;
+                  vec2 vW = texture(tex0, xy-off.xy).xy;
                   
                   // This also needs obstacle support, see https://github.com/patriciogonzalezvivo/ofxFluid/blob/master/src/ofxFluid.cpp#L161
 
-                  gl_FragColor.r = (vE.x - vW.x + vN.y - vS.y) * 0.5;
+                  fragColor.r = (vE.x - vW.x + vN.y - vS.y) * 0.5;
                 }
                 );
   }

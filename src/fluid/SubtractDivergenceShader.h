@@ -26,23 +26,25 @@ protected:
                 uniform sampler2D tex0; // velocities
                 uniform sampler2D pressures;
                 uniform vec2 texSize;
+                in vec2 texCoordVarying;
+                out vec4 fragColor;
 
                 void main(){
-                  vec2 xy = gl_TexCoord[0].st;
+                  vec2 xy = texCoordVarying.xy;
                   vec2 off = vec2(1.0, 0.0) / texSize;
 
                   // Needs to support obstacles https://github.com/patriciogonzalezvivo/ofxFluid/blob/master/src/ofxFluid.cpp#L113
 
-                  float pN = texture2D(pressures, xy+off.yx).r;
-                  float pS = texture2D(pressures, xy-off.yx).r;
-                  float pE = texture2D(pressures, xy+off.xy).r;
-                  float pW = texture2D(pressures, xy-off.xy).r;
+                  float pN = texture(pressures, xy+off.yx).r;
+                  float pS = texture(pressures, xy-off.yx).r;
+                  float pE = texture(pressures, xy+off.xy).r;
+                  float pW = texture(pressures, xy-off.xy).r;
                   vec2 grad = vec2(pE - pW, pN - pS) * 0.5;
                   
-                  vec2 oldV = texture2D(tex0, xy).xy;
+                  vec2 oldV = texture(tex0, xy).xy;
                   vec2 newV = oldV - grad;
 
-                  gl_FragColor.rg = newV;
+                  fragColor.rg = newV;
                 }
                 );
   }

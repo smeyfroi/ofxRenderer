@@ -33,21 +33,23 @@ protected:
                 uniform vec2 texSize;
                 uniform float alpha;
                 uniform float rBeta;
-                
+                in vec2 texCoordVarying;
+                out vec4 fragColor;
+
                 void main() {
-                  vec2 xy = gl_TexCoord[0].st;
+                  vec2 xy = texCoordVarying.xy;
                   vec2 off = vec2(1.0, 0.0) / texSize;
 
                   // For obstacle support see https://github.com/patriciogonzalezvivo/ofxFluid/blob/master/src/ofxFluid.cpp#L75
                   
-                  vec4 pN = texture2D(tex0, xy+off.yx);
-                  vec4 pS = texture2D(tex0, xy-off.yx);
-                  vec4 pE = texture2D(tex0, xy+off.xy);
-                  vec4 pW = texture2D(tex0, xy-off.xy);
+                  vec4 pN = texture(tex0, xy+off.yx);
+                  vec4 pS = texture(tex0, xy-off.yx);
+                  vec4 pE = texture(tex0, xy+off.xy);
+                  vec4 pW = texture(tex0, xy-off.xy);
 
-                  vec4 bC = texture2D(b, xy);
+                  vec4 bC = texture(b, xy);
                   
-                  gl_FragColor = (pW + pE + pS + pN + alpha * bC) * rBeta;
+                  fragColor = (pW + pE + pS + pN + alpha * bC) * rBeta;
                 }
                 );
   }

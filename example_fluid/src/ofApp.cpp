@@ -1,14 +1,13 @@
 #include "ofApp.h"
 
-constexpr float SCALE = 2.0;
+constexpr float SCALE = 1.0;
 
 //--------------------------------------------------------------
 void ofApp::setup(){
-  ofSetVerticalSync(false);
-  ofEnableAlphaBlending();
-  ofDisableArbTex(); // required for texture2D to work in GLSL, makes texture coords normalized
   ofSetFrameRate(60);
-
+  ofBackground(0);
+  ofDisableArbTex();
+  
   fluidSimulation.setup(ofGetWindowSize()*SCALE);
   parameters.add(fluidSimulation.getParameterGroup());
   gui.setup(parameters);
@@ -18,12 +17,12 @@ void ofApp::setup(){
 void ofApp::update() {
   if (ofGetMousePressed()) {
     FluidSimulation::Impulse impulse {
-      { ofGetMouseX()*SCALE, ofGetMouseY()*SCALE },
-      30.0*SCALE, // radius
-      { (ofGetMouseX() - ofGetPreviousMouseX())*0.005, (ofGetMouseY() - ofGetPreviousMouseY())*0.005 }, // velocity
+      { ofGetMouseX()*SCALE, ofGetMouseY()*SCALE }, // position
+      50.0*SCALE, // radius
+      glm::vec2 { (ofGetMouseX() - ofGetPreviousMouseX())*0.005, (ofGetMouseY() - ofGetPreviousMouseY())*0.005 } * SCALE, // velocity
       0.05*SCALE, // radialVelocity
-      ofFloatColor(0.2+ofRandom(0.4), 0.05+ofRandom(0.3), 0.1+ofRandom(0.3), 0.05)*0.1,
-      10.0 // temperature
+      ofFloatColor(0.2+ofRandom(0.4), 0.05+ofRandom(0.3), 0.1+ofRandom(0.3), 0.05),
+      1.0, // colorDensity
     };
     fluidSimulation.applyImpulse(impulse);
   }
@@ -32,7 +31,6 @@ void ofApp::update() {
 
 //--------------------------------------------------------------
 void ofApp::draw() {
-  ofClear(0, 255);
   fluidSimulation.draw(0, 0, ofGetWindowWidth(), ofGetWindowHeight());
   gui.draw();
   ofSetWindowTitle(ofToString(ofGetFrameRate()));

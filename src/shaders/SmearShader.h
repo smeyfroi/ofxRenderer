@@ -8,19 +8,20 @@
 #pragma once
 
 #include "Shader.h"
+#include "UnitQuadMesh.h"
 
 class SmearShader : public Shader {
 
 public:
   void render(PingPongFbo& fbo_, glm::vec2 translateBy_, float mixNew_, float fadeMultiplier_ = 1.0) {
-    ofEnableBlendMode(OF_BLENDMODE_ALPHA);
     fbo_.getTarget().begin();
     {
       shader.begin();
+      shader.setUniformTexture("tex0", fbo_.getSource().getTexture(), 1);
       shader.setUniform2f("translateBy", translateBy_);
       shader.setUniform1f("mixNew", mixNew_);
       shader.setUniform1f("fadeMultiplier", fadeMultiplier_);
-      fbo_.getSource().draw(0, 0);
+      quadMesh.draw({ 0.0, 0.0 }, { fbo_.getWidth(), fbo_.getHeight() });
       shader.end();
     }
     fbo_.getTarget().end();
@@ -45,4 +46,7 @@ protected:
                 }
                 );
   }
+  
+private:
+  UnitQuadMesh quadMesh;
 };
