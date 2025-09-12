@@ -45,24 +45,27 @@ protected:
                 uniform float force; // multiplier for flow
 //                uniform float power;
                 
+                in vec2 texCoordVarying;
+                out vec4 fragColor;
+
                 // https://github.com/msfeldstein/glsl-map/blob/master/index.glsl
 //                vec2 map(vec2 value, vec2 inMin, vec2 inMax, vec2 outMin, vec2 outMax) {
 //                  return outMin + (outMax - outMin) * (value - inMin) / (inMax - inMin);
 //                }
 
                 void main() {
-                  vec2 xy = gl_TexCoord[0].st;
-                  
+                  vec2 xy = texCoordVarying.xy;
+
                   vec2 off = vec2(offset, 0.0) / texSize;
-                  vec4 gradX = (texture2D(tex0, xy+off.xy) - texture2D(tex0, xy-off.xy)) +
-                  (texture2D(lastFrame, xy+off.xy) - texture2D(lastFrame, xy-off.xy));
-                  vec4 gradY = (texture2D(tex0, xy+off.yx) - texture2D(tex0, xy-off.yx)) +
-                  (texture2D(lastFrame, xy+off.yx) - texture2D(lastFrame, xy-off.yx));
+                  vec4 gradX = (texture(tex0, xy+off.xy) - texture(tex0, xy-off.xy)) +
+                  (texture(lastFrame, xy+off.xy) - texture(lastFrame, xy-off.xy));
+                  vec4 gradY = (texture(tex0, xy+off.yx) - texture(tex0, xy-off.yx)) +
+                  (texture(lastFrame, xy+off.yx) - texture(lastFrame, xy-off.yx));
                   vec4 gradMag = sqrt((gradX*gradX) + (gradY*gradY) + vec4(0.00001));
                   
-                  vec4 diff = -1 * (texture2D(tex0, xy)-texture2D(lastFrame, xy));
+                  vec4 diff = /*-1 **/ (texture(tex0, xy) - texture(lastFrame, xy));
                   
-                  vec2 flow = vec2((diff*(gradX/gradMag)).x, (diff*(gradY/gradMag)).x);
+                  vec2 flow = vec2((diff * (gradX / gradMag)).x, (diff * (gradY / gradMag)).x);
                   flow *= force;
                   
 //                  float magnitude = length(flow);
@@ -77,7 +80,7 @@ protected:
 //                  vec4 outRange = vec4(0.0, 0.0, 1.0, 1.0);
 //                  flow = map(flow, inRange.xy, inRange.zw, outRange.xy, outRange.zw);
                   
-                  gl_FragColor = vec4(flow, 0.0, 1.0);
+                  fragColor = vec4(flow, 0.0, 1.0);
                 }
                 );
   }
