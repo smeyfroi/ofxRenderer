@@ -63,7 +63,7 @@ protected:
                   (texture(lastFrame, xy+off.yx) - texture(lastFrame, xy-off.yx));
                   vec4 gradMag = sqrt((gradX*gradX) + (gradY*gradY) + vec4(0.00001));
                   
-                  vec4 diff = /*-1 **/ (texture(tex0, xy) - texture(lastFrame, xy));
+                  vec4 diff = (texture(tex0, xy) - texture(lastFrame, xy));
                   
                   vec2 flow = vec2((diff * (gradX / gradMag)).x, (diff * (gradY / gradMag)).x);
                   flow *= force;
