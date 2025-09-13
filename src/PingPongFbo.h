@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ofFbo.h"
+#include "ofGraphics.h"
 #include <algorithm>
 #include <iterator>
 
