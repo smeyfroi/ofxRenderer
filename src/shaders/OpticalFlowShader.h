@@ -12,7 +12,7 @@ public:
     shader.setUniform1f("offset", offsetParameter);
     shader.setUniform1f("threshold", thresholdParameter);
     shader.setUniform1f("force", forceParameter);
-//    shader.setUniform1f("power", powerParameter);
+    shader.setUniform1f("power", powerParameter);
     shader.setUniformTexture("lastFrame", lastFrame_.getTexture(), 1);
     shader.setUniform2f("texSize", glm::vec2(currentFrame_.getWidth(), currentFrame_.getHeight()));
     currentFrame_.draw(0, 0, w, h);
@@ -27,7 +27,7 @@ public:
       parameters.add(offsetParameter);
       parameters.add(thresholdParameter);
       parameters.add(forceParameter);
-//      parameters.add(powerParameter);
+      parameters.add(powerParameter);
     }
     return parameters;
   }
@@ -43,7 +43,7 @@ protected:
                 uniform float offset; // distance to compare
                 uniform float threshold; // constant added to gradMag
                 uniform float force; // multiplier for flow
-//                uniform float power;
+                uniform float power; // < 1 boosts subtle motions (brighter lows); power > 1 suppresses subtle motions (only strong motion stands out)
                 
                 in vec2 texCoordVarying;
                 out vec4 fragColor;
@@ -68,12 +68,12 @@ protected:
                   vec2 flow = vec2((diff * (gradX / gradMag)).x, (diff * (gradY / gradMag)).x);
                   flow *= force;
                   
-//                  float magnitude = length(flow);
-//                  magnitude = max(magnitude, threshold);
-//                  magnitude -= threshold;
-//                  magnitude /= (1-threshold);
-//                  magnitude = pow(magnitude, power);
-//                  flow = normalize(flow) * vec2(min(max(magnitude, 0), 1));
+                  float magnitude = length(flow);
+                  magnitude = max(magnitude, threshold);
+                  magnitude -= threshold;
+                  magnitude /= (1-threshold);
+                  magnitude = pow(magnitude, power);
+                  flow = normalize(flow) * vec2(min(max(magnitude, 0), 1));
                   
                   // remap [-1,1] to [0,1]
 //                  vec4 inRange = vec4(-1.0, -1.0, 1.0, 1.0);
@@ -88,7 +88,7 @@ protected:
 private:
   ofParameterGroup parameters;
   ofParameter<float> offsetParameter {"offset", 2.0, 1.0, 10.0 };
-  ofParameter<float> thresholdParameter {"threshold", 0.6, 0.0, 1.0 };
+  ofParameter<float> thresholdParameter {"threshold", 0.4, 0.0, 1.0 };
   ofParameter<float> forceParameter {"force", 3.0, 0.1, 10.0 };
-//  ofParameter<float> powerParameter {"power", 1.0, 0.1, 1.0 };
+  ofParameter<float> powerParameter {"power", 1.0, 0.1, 10.0 };
 };
