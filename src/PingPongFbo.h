@@ -1,6 +1,8 @@
 #pragma once
 
 #include "ofFbo.h"
+#include <algorithm>
+#include <iterator>
 
 class PingPongFbo : public ofBaseDraws {
 public:
@@ -24,6 +26,22 @@ public:
   ofFbo& getSource() { return fbos[1 - currentIndex]; }
   ofFbo& getTarget() { return fbos[currentIndex]; }
   void swap() { currentIndex = 1 - currentIndex; }
+  
+  void clearFloat(float r, float g, float b, float a) {
+    std::for_each(std::begin(fbos), std::end(fbos), [r, g, b, a](ofFbo& fbo) {
+      fbo.begin();
+      ofClearFloat(r, g, b, a);
+      fbo.end();
+    });
+  }
+  
+  void clear(float brightness, float a) {
+    std::for_each(std::begin(fbos), std::end(fbos), [brightness, a](ofFbo& fbo) {
+      fbo.begin();
+      ofClear(brightness, a);
+      fbo.end();
+    });
+  }
   
   void draw(float x, float y) const override {
     draw(x, y, width, height);
