@@ -63,7 +63,7 @@ protected:
                   (texture(lastFrame, xy+off.yx) - texture(lastFrame, xy-off.yx));
                   vec4 gradMag = sqrt((gradX*gradX) + (gradY*gradY) + vec4(0.00001));
                   
-                  vec4 diff = (texture(tex0, xy) - texture(lastFrame, xy));
+                  vec4 diff = -1.0 * (texture(tex0, xy) - texture(lastFrame, xy));
                   
                   vec2 flow = vec2((diff * (gradX / gradMag)).x, (diff * (gradY / gradMag)).x);
                   flow *= force;
@@ -75,6 +75,7 @@ protected:
                   magnitude /= denom;
                   magnitude = pow(magnitude, power);
                   flow = normalize(flow) * vec2(min(max(magnitude, 0), 1));
+//                  flow = mix(vec2(0.0), flow, equal(flow, flow));
                   
                   // remap [-1,1] to [0,1]
 //                  vec4 inRange = vec4(-1.0, -1.0, 1.0, 1.0);
