@@ -71,7 +71,8 @@ protected:
                   float magnitude = length(flow);
                   magnitude = max(magnitude, threshold);
                   magnitude -= threshold;
-                  magnitude /= (1-threshold);
+                  float denom = max(1.0 - threshold, 1e-6);
+                  magnitude /= denom;
                   magnitude = pow(magnitude, power);
                   flow = normalize(flow) * vec2(min(max(magnitude, 0), 1));
                   
