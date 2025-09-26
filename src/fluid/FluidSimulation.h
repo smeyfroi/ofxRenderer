@@ -23,7 +23,7 @@
 // TODO: bouyancy has never worked
 class FluidSimulation {
   
-#ifndef TARGET_OS_IOS
+#ifdef TARGET_MAC
 const GLint FLOAT_A_MODE = GL_RGBA32F;
 const GLint FLOAT_MODE = GL_RGB32F;
 #else
