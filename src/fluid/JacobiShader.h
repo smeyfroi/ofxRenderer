@@ -21,8 +21,8 @@ public:
     shader.end();
   }
   
-  static ofParameter<int> createIterationsParameter(const std::string& prefix, int value=40) {
-    return ofParameter<int> { prefix+"iterations", value, 10, 80 };
+  static ofParameter<int> createIterationsParameter(const std::string& prefix, int value=20) {
+    return ofParameter<int> { prefix+"iterations", value, 0, 30 };
   }
 
 protected:

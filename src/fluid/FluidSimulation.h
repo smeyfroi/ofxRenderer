@@ -27,8 +27,8 @@ class FluidSimulation {
 const GLint FLOAT_A_MODE = GL_RGBA32F;
 const GLint FLOAT_MODE = GL_RGB32F;
 #else
-const GLint FLOAT_A_MODE = GL_RGBA16F;
-const GLint FLOAT_MODE = GL_RGB16F;
+const GLint FLOAT_A_MODE = GL_RGBA32F;
+const GLint FLOAT_MODE = GL_RGB32F;
 #endif
 
 public:
@@ -61,15 +61,11 @@ public:
   void setup(glm::vec2 flowValuesSize) {
     flowValuesFboPtr = std::make_shared<PingPongFbo>();
     flowValuesFboPtr->allocate(createFboSettings(flowValuesSize, FLOAT_A_MODE));
-    flowValuesFboPtr->getSource().begin();
-    flowValuesFboPtr->getSource().clearColorBuffer(ofFloatColor(0.0, 0.0, 0.0, 0.0));
-    flowValuesFboPtr->getSource().end();
+    flowValuesFboPtr->clearFloat(0.0, 0.0, 0.0, 0.0);
 
     flowVelocitiesFboPtr = std::make_shared<PingPongFbo>();
     flowVelocitiesFboPtr->allocate(createFboSettings(flowValuesSize, FLOAT_MODE));
-    flowVelocitiesFboPtr->getSource().begin();
-    flowVelocitiesFboPtr->getSource().clearColorBuffer(ofFloatColor(0.0, 0.0, 0.0, 0.0));
-    flowVelocitiesFboPtr->getSource().end();
+    flowVelocitiesFboPtr->clearFloat(0.0, 0.0, 0.0, 0.0);
 
     setupInternals();
   }
@@ -192,13 +188,13 @@ private:
   ofParameterGroup parameters;
 
   ofParameter<float> dtParameter { "dt", 0.1, 0.001, 0.5 };
-  ofParameter<float> vorticityParameter { "vorticity", 10.0, 0.00, 30.0 };
+  ofParameter<float> vorticityParameter { "vorticity", 50.0, 0.00, 100.0 };
   
   ofParameter<float> valueAdvectDissipationParameter = AdvectShader::createDissipationParameter("value:", 0.999);
   ofParameter<float> velocityAdvectDissipationParameter = AdvectShader::createDissipationParameter("velocity:", 0.999);
 //  ofParameter<float> temperatureAdvectDissipationParameter = AdvectShader::createDissipationParameter("temperature:");
-  ofParameter<int> valueDiffusionIterationsParameter = JacobiShader::createIterationsParameter("value:", 2);
-  ofParameter<int> velocityDiffusionIterationsParameter = JacobiShader::createIterationsParameter("velocity:", 2);
+  ofParameter<int> valueDiffusionIterationsParameter = JacobiShader::createIterationsParameter("value:", 1);
+  ofParameter<int> velocityDiffusionIterationsParameter = JacobiShader::createIterationsParameter("velocity:", 1);
   ofParameter<int> pressureDiffusionIterationsParameter = JacobiShader::createIterationsParameter("pressure:", 25);
 //  ofParameterGroup applyBouyancyParameters { "Bouyancy" };
 //  ofParameter<float> ambientTemperatureParameter = ApplyBouyancyShader::createAmbientTemperatureParameter();
