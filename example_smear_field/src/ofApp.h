@@ -38,6 +38,7 @@ private:
   ofParameter<float> alphaParameter { "alpha", 0.998, 0.9, 1.0 };
   ofParameter<float> mixNewParameter { "mixNew", 0.9, 0.0, 1.0 };
   ofParameter<glm::vec2> translateByParameter { "translateBy", {0.0, 0.0001}, {-0.001, -0.001}, {0.001, 0.001} };
-  ofParameter<float> fieldMultiplierParameter { "fieldMultiplier", 0.0005, 0.0, 0.001 };
+  ofParameter<float> fieldMultiplierParameter { "fieldMultiplier", 0.0005, 0.0, 0.1 };
+  ofParameter<glm::vec2> fieldBiasParameter { "fieldBias", {-0.5, -0.5}, {-1.0, -1.0}, {1.0, 1.0} };
   ofParameterGroup parameters;
 };

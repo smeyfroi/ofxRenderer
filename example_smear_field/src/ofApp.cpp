@@ -39,6 +39,7 @@ void ofApp::setup(){
   parameters.add(mixNewParameter);
   parameters.add(translateByParameter);
   parameters.add(fieldMultiplierParameter);
+  parameters.add(fieldBiasParameter);
   gui.setup(parameters);
 }
 
@@ -56,7 +57,7 @@ void ofApp::update(){
   fbo.getSource().end();
 
 //  smearShader.render(fbo, translateByParameter, mixNewParameter, alphaParameter); // no field
-  smearShader.render(fbo, translateByParameter, mixNewParameter, alphaParameter, fieldFbo.getTexture(), fieldMultiplierParameter); // with field
+  smearShader.render(fbo, translateByParameter, mixNewParameter, alphaParameter, fieldFbo.getTexture(), fieldMultiplierParameter, fieldBiasParameter); // with field
 }
 
 //--------------------------------------------------------------

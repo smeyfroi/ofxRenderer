@@ -21,16 +21,17 @@ public:
     emptyFieldTexture.loadData(emptyFieldPixels);
   }
 
-  void render(PingPongFbo& fbo_, glm::vec2 translateBy_, float mixNew_, float fadeMultiplier_, ofTexture& fieldTexture_, float fieldMultiplier_) {
+  void render(PingPongFbo& fbo_, glm::vec2 translateBy_, float mixNew_, float fadeMultiplier_, ofTexture& fieldTexture_, float fieldMultiplier_, glm::vec2 fieldBias_) {
     fbo_.getTarget().begin();
     {
       shader.begin();
       shader.setUniformTexture("tex0", fbo_.getSource().getTexture(), 1);
       shader.setUniform2f("translateBy", translateBy_);
-      shader.setUniformTexture("fieldTexture", fieldTexture_, 2);
-      shader.setUniform1f("fieldMultiplier", fieldMultiplier_);
       shader.setUniform1f("mixNew", mixNew_);
       shader.setUniform1f("fadeMultiplier", fadeMultiplier_);
+      shader.setUniformTexture("fieldTexture", fieldTexture_, 2);
+      shader.setUniform1f("fieldMultiplier", fieldMultiplier_);
+      shader.setUniform2f("fieldBias", fieldBias_);
       quadMesh.draw({ 0.0, 0.0 }, { fbo_.getWidth(), fbo_.getHeight() });
       shader.end();
     }
@@ -44,10 +45,11 @@ public:
       shader.begin();
       shader.setUniformTexture("tex0", fbo_.getSource().getTexture(), 1);
       shader.setUniform2f("translateBy", translateBy_);
-      shader.setUniformTexture("fieldTexture", emptyFieldTexture, 2);
-      shader.setUniform1f("fieldMultiplier", 0.0);
       shader.setUniform1f("mixNew", mixNew_);
       shader.setUniform1f("fadeMultiplier", fadeMultiplier_);
+      shader.setUniformTexture("fieldTexture", emptyFieldTexture, 2);
+      shader.setUniform1f("fieldMultiplier", 0.0);
+      shader.setUniform2f("fieldBias", { 0.0, 0.0 });
       quadMesh.draw({ 0.0, 0.0 }, { fbo_.getWidth(), fbo_.getHeight() });
       shader.end();
     }
@@ -64,11 +66,12 @@ protected:
                 uniform float fieldMultiplier;
                 uniform float mixNew;
                 uniform float fadeMultiplier;
+                uniform vec2 fieldBias;
                 in vec2 texCoordVarying;
                 out vec4 fragColor;
 
                 void main() {
-                  vec2 fieldTranslateBy = texture(fieldTexture, texCoordVarying).xy * fieldMultiplier;
+                  vec2 fieldTranslateBy = (fieldBias + texture(fieldTexture, texCoordVarying).xy) * fieldMultiplier;
                   vec2 totalTranslation = translateBy + fieldTranslateBy;
                   vec4 smearColor = texture(tex0, texCoordVarying - totalTranslation);
                   vec4 existingColor = texture(tex0, texCoordVarying);
