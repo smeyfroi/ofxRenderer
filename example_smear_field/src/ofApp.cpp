@@ -25,28 +25,25 @@ void ofApp::setup(){
 
   smearShader.load();
   
-  ofFbo::Settings s;
-  s.width = fieldWidth;
-  s.height = fieldHeight;
-  s.internalformat = GL_RG16F;
-  s.useDepth = false;
-  s.useStencil = false;
-  s.numColorbuffers = 1;
-  s.textureTarget = GL_TEXTURE_2D;
-  fieldFbo.allocate(s);
+  field1Texture.allocate(fieldWidth, fieldHeight, GL_RG16F);
+  field2Texture.allocate(fieldWidth, fieldHeight, GL_RG16F);
 
   parameters.add(alphaParameter);
   parameters.add(mixNewParameter);
   parameters.add(translateByParameter);
-  parameters.add(fieldMultiplierParameter);
-  parameters.add(fieldBiasParameter);
+  parameters.add(field1MultiplierParameter);
+  parameters.add(field1BiasParameter);
+  parameters.add(field2MultiplierParameter);
+  parameters.add(field2BiasParameter);
   gui.setup(parameters);
 }
 
 //--------------------------------------------------------------
 void ofApp::update(){
-  ofFloatPixels pixels = makePerlin2DNoise(fieldWidth, fieldHeight, 0.01, ofGetElapsedTimef()*0.1);
-  fieldFbo.getTexture().loadData(pixels);
+  ofFloatPixels pixels1 = makePerlin2DNoise(fieldWidth, fieldHeight, 0.005, ofGetElapsedTimef()*0.1);
+  field1Texture.loadData(pixels1);
+  ofFloatPixels pixels2 = makePerlin2DNoise(fieldWidth, fieldHeight, 0.02, -1000.0 + ofGetElapsedTimef()*0.1);
+  field2Texture.loadData(pixels2);
 
   fbo.getSource().begin();
   {
@@ -57,7 +54,8 @@ void ofApp::update(){
   fbo.getSource().end();
 
 //  smearShader.render(fbo, translateByParameter, mixNewParameter, alphaParameter); // no field
-  smearShader.render(fbo, translateByParameter, mixNewParameter, alphaParameter, fieldFbo.getTexture(), fieldMultiplierParameter, fieldBiasParameter); // with field
+//  smearShader.render(fbo, translateByParameter, mixNewParameter, alphaParameter, field1Texture, field1MultiplierParameter, field1BiasParameter); // with field 1
+  smearShader.render(fbo, translateByParameter, mixNewParameter, alphaParameter, field1Texture, field1MultiplierParameter, field1BiasParameter, field2Texture, field2MultiplierParameter, field2BiasParameter); // with fields 1 and 2
 }
 
 //--------------------------------------------------------------
