@@ -26,6 +26,10 @@ public:
   void gotMessage(ofMessage msg) override;
 		
 private:
+  int fieldWidth = 200;
+  int fieldHeight = 200;
+  ofFbo fieldFbo;
+
   SmearShader smearShader;
   
   PingPongFbo fbo;
@@ -33,6 +37,7 @@ private:
   ofxPanel gui;
   ofParameter<float> alphaParameter { "alpha", 0.998, 0.9, 1.0 };
   ofParameter<float> mixNewParameter { "mixNew", 0.9, 0.0, 1.0 };
-  ofParameter<glm::vec2> translateByParameter { "translateBy", {0.0, 0.0005}, {-0.01, -0.01}, {0.01, 0.01} };
+  ofParameter<glm::vec2> translateByParameter { "translateBy", {0.0, 0.0001}, {-0.001, -0.001}, {0.001, 0.001} };
+  ofParameter<float> fieldMultiplierParameter { "fieldMultiplier", 0.0005, 0.0, 0.001 };
   ofParameterGroup parameters;
 };

@@ -1,5 +1,20 @@
 #include "ofApp.h"
 
+
+static ofFloatPixels makePerlin2DNoise(int w, int h, float scale, float z) {
+  ofFloatPixels pixels;
+  pixels.allocate(w, h, OF_PIXELS_RGB);
+  for (int y = 0; y < h; ++y) {
+    for (int x = 0; x < w; ++x) {
+      float n1 = ofNoise(x * scale, y * scale, z);
+      float n2 = ofNoise((x+5000) * scale, (y+5000) * scale, z);
+      pixels.setColor(x, y, ofFloatColor(n1, n2, 0.0, 0.0));
+    }
+  }
+  return pixels;
+}
+
+
 //--------------------------------------------------------------
 void ofApp::setup(){
   ofEnableAlphaBlending();
@@ -10,14 +25,28 @@ void ofApp::setup(){
 
   smearShader.load();
   
+  ofFbo::Settings s;
+  s.width = fieldWidth;
+  s.height = fieldHeight;
+  s.internalformat = GL_RG16F;
+  s.useDepth = false;
+  s.useStencil = false;
+  s.numColorbuffers = 1;
+  s.textureTarget = GL_TEXTURE_2D;
+  fieldFbo.allocate(s);
+
   parameters.add(alphaParameter);
   parameters.add(mixNewParameter);
   parameters.add(translateByParameter);
+  parameters.add(fieldMultiplierParameter);
   gui.setup(parameters);
 }
 
 //--------------------------------------------------------------
 void ofApp::update(){
+  ofFloatPixels pixels = makePerlin2DNoise(fieldWidth, fieldHeight, 0.01, ofGetElapsedTimef()*0.1);
+  fieldFbo.getTexture().loadData(pixels);
+
   fbo.getSource().begin();
   {
     ofEnableBlendMode(OF_BLENDMODE_DISABLED);
@@ -26,7 +55,8 @@ void ofApp::update(){
   }
   fbo.getSource().end();
 
-  smearShader.render(fbo, translateByParameter, mixNewParameter, alphaParameter);
+//  smearShader.render(fbo, translateByParameter, mixNewParameter, alphaParameter); // no field
+  smearShader.render(fbo, translateByParameter, mixNewParameter, alphaParameter, fieldFbo.getTexture(), fieldMultiplierParameter); // with field
 }
 
 //--------------------------------------------------------------
