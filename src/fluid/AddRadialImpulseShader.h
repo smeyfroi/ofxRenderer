@@ -11,7 +11,7 @@ public:
   void render(glm::vec2 position, float radius, float value) {
     shader.begin();
     shader.setUniform1f("value", value); // positive goes outwards
-    quadMesh.draw(position, radius * 2.0);
+    quadMesh.draw(position, { radius * 2.0, radius * 2.0 });
     shader.end();
   }
   

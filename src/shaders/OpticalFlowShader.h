@@ -33,7 +33,6 @@ public:
   }
 
 protected:
-  
   std::string getFragmentShader() override {
     return GLSL(
                 uniform sampler2D tex0; // currentFrame

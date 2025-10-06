@@ -18,7 +18,7 @@ public:
     shader.begin();
     shader.setUniform1f("fadeWidth", fadeWidth);
     shader.setUniform4f("color", color);
-    quadMesh.draw(center, radius * 2.0);
+    quadMesh.draw(center, { radius * 2.0, radius * 2.0 });
     shader.end();
   }
 
