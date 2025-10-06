@@ -23,17 +23,19 @@ public:
     mesh.addTexCoord(glm::vec2(1.0, 1.0));
   }
   
-  void draw(glm::vec2 position, float size) const {
+  void draw(glm::vec2 centrePosition, glm::vec2 size, float angleRad) const {
     ofPushMatrix();
-    ofTranslate(position);
-    ofScale(size, size);
+    ofTranslate(centrePosition);
+    ofRotateRad(angleRad);
+    ofScale(size.x, size.y);
     mesh.draw();
     ofPopMatrix();
   }
-  
+
+  // Deprecated: takes top left vertex position
   void draw(glm::vec2 position, glm::vec2 size) const {
     ofPushMatrix();
-    ofTranslate(position + size / 2.0);
+    ofTranslate(position + size * 0.5f);
     ofScale(size.x, size.y);
     mesh.draw();
     ofPopMatrix();
