@@ -23,10 +23,19 @@ public:
     mesh.addTexCoord(glm::vec2(1.0, 1.0));
   }
   
-  void draw(glm::vec2 centrePosition, glm::vec2 size, float angleRad = 0.0) const {
+  void draw(glm::vec2 centrePosition, glm::vec2 size, float angleRad) const {
     ofPushMatrix();
     ofTranslate(centrePosition);
     ofRotateRad(angleRad);
+    ofScale(size.x, size.y);
+    mesh.draw();
+    ofPopMatrix();
+  }
+
+  // Takes top left vertex position for painting a quad across an entire viewport
+  void draw(glm::vec2 topLeftPosition, glm::vec2 size) const {
+    ofPushMatrix();
+    ofTranslate(topLeftPosition + size * 0.5f);
     ofScale(size.x, size.y);
     mesh.draw();
     ofPopMatrix();
