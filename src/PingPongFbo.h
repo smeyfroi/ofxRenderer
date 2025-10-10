@@ -17,23 +17,42 @@ public:
     getTarget().allocate(width, height, internalFormat_);
   }
   
-  void allocate(ofFboSettings settings) {
+  void allocate(glm::vec2 size, GLint internalFormat, int wrap=GL_CLAMP_TO_EDGE, bool useStencil=false, int numSamples=0) {
+    ofFboSettings settings;
+    settings.width = size.x;
+    settings.height = size.y;
+    settings.internalformat = internalFormat;
+    settings.wrapModeVertical = wrap;
+    settings.wrapModeHorizontal = wrap;
+    settings.useStencil = useStencil;
+    settings.numSamples = numSamples;
+    settings.useDepth = false;
+//    settings.textureTarget = GL_TEXTURE_2D;
+    allocate(settings);
+  }
+  
+  void allocate(const ofFboSettings& settings) {
     width = settings.width;
     height = settings.height;
-    getSource().allocate(settings);
-    getTarget().allocate(settings);
+    std::for_each(std::begin(fbos), std::end(fbos), [&settings](ofFbo& fbo) {
+      fbo.allocate(settings);
+    });
   }
   
   ofFbo& getSource() { return fbos[1 - currentIndex]; }
   ofFbo& getTarget() { return fbos[currentIndex]; }
   void swap() { currentIndex = 1 - currentIndex; }
   
-  void clearFloat(float r, float g, float b, float a) {
-    std::for_each(std::begin(fbos), std::end(fbos), [r, g, b, a](ofFbo& fbo) {
+  void clearFloat(ofFloatColor color) {
+    std::for_each(std::begin(fbos), std::end(fbos), [color](ofFbo& fbo) {
       fbo.begin();
-      ofClearFloat(r, g, b, a);
+      ofClearFloat(color);
       fbo.end();
     });
+  }
+  
+  void clearFloat(float r, float g, float b, float a) {
+    clearFloat(ofFloatColor(r, g, b, a));
   }
   
   void clear(float brightness, float a) {
