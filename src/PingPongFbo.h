@@ -24,10 +24,10 @@ public:
     settings.internalformat = internalFormat;
     settings.wrapModeVertical = wrap;
     settings.wrapModeHorizontal = wrap;
-    settings.useStencil = useStencil;
-    settings.numSamples = numSamples;
-    settings.useDepth = false;
-//    settings.textureTarget = GL_TEXTURE_2D;
+    settings.useStencil = useStencil; // TODO: probably enable this all the time once more Mods use it
+    settings.numSamples = numSamples; // FIXME: this is more a function of the FBO user, but must be configured at FBO creation
+    settings.useDepth = false; // NOTE: so far we don't use depth in MarkSynth
+//    settings.textureTarget = GL_TEXTURE_2D; // default is GL_TEXTURE_2D
     allocate(settings);
   }
   
@@ -37,6 +37,10 @@ public:
     std::for_each(std::begin(fbos), std::end(fbos), [&settings](ofFbo& fbo) {
       fbo.allocate(settings);
     });
+  }
+  
+  bool isAllocated() {
+    return getSource().isAllocated(); // shortcut
   }
   
   ofFbo& getSource() { return fbos[1 - currentIndex]; }
