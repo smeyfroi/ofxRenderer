@@ -22,7 +22,7 @@ public:
   }
   
   static ofParameter<int> createIterationsParameter(const std::string& prefix, int value=20) {
-    return ofParameter<int> { prefix+"iterations", value, 0, 30 };
+    return ofParameter<int> { prefix+"Iterations", value, 0, 30 };
   }
 
 protected:
