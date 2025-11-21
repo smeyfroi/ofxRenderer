@@ -74,7 +74,13 @@ protected:
                   magnitude /= denom;
                   magnitude = pow(magnitude, power);
                   flow = normalize(flow) * vec2(min(max(magnitude, 0), 1));
-//                  flow = mix(vec2(0.0), flow, equal(flow, flow));
+                  
+                  // Replace NaN and Inf with zero. I don't know why they appear
+                  if (isnan(flow.x) || isinf(flow.x)) flow.x = 0.0;
+                  if (isnan(flow.y) || isinf(flow.y)) flow.y = 0.0;
+
+                  // Replace NaN with zero. But this trick doesn't work for Inf, hence above
+                  // flow = mix(vec2(0.0), flow, equal(flow, flow));
                   
                   // remap [-1,1] to [0,1]
 //                  vec4 inRange = vec4(-1.0, -1.0, 1.0, 1.0);
