@@ -37,8 +37,19 @@ protected:
                   float normalizedDist = dist  * 2.0;
                   if (normalizedDist > 1.0) discard;
 
-                  float alpha = 1.0 - smoothstep(1.0 - fadeWidth, 1.0, normalizedDist);
-
+                  // Linear smoothstep
+//                  float alpha = 1.0 - smoothstep(1.0 - fadeWidth, 1.0, normalizedDist);
+                  
+                  // Quadratic falloff for more perceptually even brightness
+//                  float alpha = 1.0 - (normalizedDist * normalizedDist);
+//                  alpha = smoothstep(0.0, fadeWidth, alpha);
+                  
+                  // Exponential falloff (very smooth, natural light-like)
+                  float alpha = exp(-normalizedDist * normalizedDist * 3.0);
+                  
+                  // Cubic fallof (stronger centre)
+//                  float alpha = 1.0 - (normalizedDist * normalizedDist * normalizedDist);
+                  
                   fragColor = vec4(color.rgb, color.a * alpha);
                 }
                 );
