@@ -14,10 +14,12 @@
 class SoftCircleShader : public Shader {
 
 public:
-  void render(glm::vec2 center, float radius, ofFloatColor color, float fadeWidth = 0.3) {
+  // falloff: 0 = Glow (default), 1 = Dab
+  void render(glm::vec2 center, float radius, ofFloatColor color, float fadeWidth = 0.3, int falloff = 0) {
     shader.begin();
     shader.setUniform1f("fadeWidth", fadeWidth);
     shader.setUniform4f("color", color);
+    shader.setUniform1i("falloff", falloff);
     quadMesh.draw(center, { radius * 2.0, radius * 2.0 }, 0.0);
     shader.end();
   }
@@ -30,6 +32,7 @@ protected:
                 
                 uniform float fadeWidth;
                 uniform vec4 color;
+                uniform int falloff; // 0 = Glow, 1 = Dab
 
                 void main() {
                   vec2 center = vec2(0.5, 0.5);
@@ -50,7 +53,16 @@ protected:
                   // Cubic fallof (stronger centre)
 //                  float alpha = 1.0 - (normalizedDist * normalizedDist * normalizedDist);
                   
-                  fragColor = vec4(color.rgb, color.a * alpha);
+                  if (falloff == 1) {
+                    // Dab: quadratic falloff for broader, softer marks
+                    // Good for watercolor-like marks on light backgrounds
+                    float dabAlpha = 1.0 - (normalizedDist * normalizedDist);
+                    dabAlpha = max(dabAlpha, 0.0);
+                    fragColor = vec4(color.rgb, dabAlpha * color.a);
+                  } else {
+                    // Glow: exponential falloff for sharp center, glowing marks
+                    fragColor = vec4(color.rgb, color.a * alpha);
+                  }
                 }
                 );
   }
