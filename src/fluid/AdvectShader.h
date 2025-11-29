@@ -23,7 +23,7 @@ public:
   }
   
   static ofParameter<float> createDissipationParameter(const std::string& prefix, float value=0.996) {
-    return ofParameter<float> { prefix+"Dissipation", value, 0.990, 0.999 };
+    return ofParameter<float> { prefix+"Dissipation", value, 0.995, 0.9999 };
   }
 
 protected:
