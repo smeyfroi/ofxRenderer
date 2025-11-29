@@ -55,10 +55,12 @@ protected:
                   
                   if (falloff == 1) {
                     // Dab: quadratic falloff for broader, softer marks
-                    // Good for watercolor-like marks on light backgrounds
+                    // Uses premultiplied alpha to avoid halo artifacts when marks overlap
+                    // Requires GL_ONE, GL_ONE_MINUS_SRC_ALPHA blend func
                     float dabAlpha = 1.0 - (normalizedDist * normalizedDist);
                     dabAlpha = max(dabAlpha, 0.0);
-                    fragColor = vec4(color.rgb, dabAlpha * color.a);
+                    float a = dabAlpha * color.a;
+                    fragColor = vec4(color.rgb * a, a);
                   } else {
                     // Glow: exponential falloff for sharp center, glowing marks
                     fragColor = vec4(color.rgb, color.a * alpha);
