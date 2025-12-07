@@ -20,7 +20,7 @@ void ofApp::update() {
       { ofGetMouseX()*SCALE, ofGetMouseY()*SCALE }, // position
       50.0*SCALE, // radius
       glm::vec2 { (ofGetMouseX() - ofGetPreviousMouseX())*0.005, (ofGetMouseY() - ofGetPreviousMouseY())*0.005 } * SCALE, // velocity
-      0.05*SCALE, // radialVelocity
+      10.0*SCALE, // radialVelocity
       ofFloatColor(0.2+ofRandom(0.4), 0.05+ofRandom(0.3), 0.1+ofRandom(0.3), 0.05),
       1.0, // colorDensity
     };

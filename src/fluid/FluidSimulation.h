@@ -175,12 +175,15 @@ public:
     softCircleShader.render(impulse.position, impulse.radius, impulse.color * impulse.colorDensity);
     flowValuesFboPtr->getSource().end();
 
-    flowVelocitiesFboPtr->getSource().begin();
-    ofEnableBlendMode(OF_BLENDMODE_ADD);
-    addRadialImpulseShader.render(impulse.position, impulse.radius, impulse.radialVelocity);
+    // Apply a radial velocity impulse directly via the shader,
+    // which reads the previous velocity field and writes an updated one.
+    addRadialImpulseShader.render(*flowVelocitiesFboPtr,
+                                  impulse.position,
+                                  impulse.radius,
+                                  impulse.radialVelocity,
+                                  dtParameter.get());
 //    ofFloatColor velocityValue { impulse.velocity.r, impulse.velocity.g, 0.0, 1.0 };
 //    softCircleShader.render(impulse.position, impulse.radius, velocityValue);
-    flowVelocitiesFboPtr->getSource().end();
     
 //    glm::vec4 temperatureValue { impulse.temperature, 0.0, 0.0, 0.0 };
 //    addImpulseSpotShader.render(temperaturesFbo, impulse.position, impulse.radius, temperatureValue);
