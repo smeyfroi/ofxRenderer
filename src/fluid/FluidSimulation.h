@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "ofxGui.h"
 #include "PingPongFbo.h"
 #include "AdvectShader.h"

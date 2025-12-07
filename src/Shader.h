@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "ofMain.h"
 #include "PingPongFbo.h"
 
