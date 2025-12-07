@@ -7,6 +7,7 @@ class OpticalFlowShader : public Shader {
 
 public:
   void render(float w, float h, const ofFbo& currentFrame_, ofFbo& lastFrame_) {
+    ofPushStyle();
     ofEnableBlendMode(OF_BLENDMODE_DISABLED);
     shader.begin();
     shader.setUniform1f("offset", offsetParameter);
@@ -17,6 +18,7 @@ public:
     shader.setUniform2f("texSize", glm::vec2(currentFrame_.getWidth(), currentFrame_.getHeight()));
     currentFrame_.draw(0, 0, w, h);
     shader.end();
+    ofPopStyle();
   }
   
   std::string getParameterGroupName() { return "Optical Flow"; }

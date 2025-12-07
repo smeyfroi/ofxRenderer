@@ -15,6 +15,7 @@ class ThresholdedAddShader : public Shader {
 
 public:
   void begin(const ofFbo& existingFbo_, ofFloatColor color) {
+    ofPushStyle();
     ofEnableBlendMode(OF_BLENDMODE_DISABLED);
     ofSetColor(255);
     existingFbo_.draw(0, 0);
@@ -26,6 +27,7 @@ public:
   }
   void end() {
     shader.end();
+    ofPopStyle();
   }
 
 protected:

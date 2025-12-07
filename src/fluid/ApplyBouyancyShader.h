@@ -6,6 +6,7 @@ class ApplyBouyancyShader : public Shader {
 
 public:
   void render(PingPongFbo& velocities, PingPongFbo& temperatures, PingPongFbo& values, float dt, float ambientTemperature, float smokeBouyancy, float smokeWeight, float gravityForceX, float gravityForceY) {
+    ofPushStyle();
     ofEnableBlendMode(OF_BLENDMODE_DISABLED);
     shader.begin();
     shader.setUniform1f("dt", dt);
@@ -21,6 +22,7 @@ public:
     velocities.getTarget().end();
     velocities.swap();
     shader.end();
+    ofPopStyle();
   }
   
   static ofParameter<float> createAmbientTemperatureParameter(float value=0.0) {

@@ -8,12 +8,15 @@ public:
   VorticityRenderer() {}
   
   void render(const ofBaseDraws& velocities_) override {
+    ofPushStyle();
+    ofEnableBlendMode(OF_BLENDMODE_DISABLED);
     fbo.begin();
     shader.begin();
     shader.setUniform2f("texSize", glm::vec2(velocities_.getWidth(), velocities_.getHeight()));
     velocities_.draw(0, 0);
     shader.end();
     fbo.end();
+    ofPopStyle();
   }
 
 protected:

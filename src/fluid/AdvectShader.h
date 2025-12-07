@@ -8,6 +8,8 @@ class AdvectShader : public Shader {
 
 public:
   void render(PingPongFbo& values, const ofTexture& velocities, float dt, float dissipation) {
+    ofPushStyle();
+    ofEnableBlendMode(OF_BLENDMODE_DISABLED);
     values.getTarget().begin();
     shader.begin();
     {
@@ -20,6 +22,7 @@ public:
     shader.end();
     values.getTarget().end();
     values.swap();
+    ofPopStyle();
   }
   
   static ofParameter<float> createDissipationParameter(const std::string& prefix, float value=0.996) {

@@ -6,6 +6,7 @@ class JacobiShader : public Shader {
 
 public:
   void render(PingPongFbo& x, const ofTexture& b, float dt, float alpha, float rBeta, int iterations) {
+    ofPushStyle();
     ofEnableBlendMode(OF_BLENDMODE_DISABLED);
     shader.begin();
     shader.setUniformTexture("b", b, 1);
@@ -19,6 +20,7 @@ public:
       x.swap();
     }
     shader.end();
+    ofPopStyle();
   }
   
   static ofParameter<int> createIterationsParameter(const std::string& prefix, int value=20) {

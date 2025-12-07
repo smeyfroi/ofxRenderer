@@ -9,6 +9,7 @@ class AddTextureShader : public Shader {
 
 public:
   void render(PingPongFbo& fbo_, const ofTexture& addedTexture_, float multiplier_, float offset_ = 0.0f) {
+    ofPushStyle();
     ofEnableBlendMode(OF_BLENDMODE_DISABLED);
     fbo_.getTarget().begin();
     shader.begin();
@@ -19,6 +20,7 @@ public:
     shader.end();
     fbo_.getTarget().end();
     fbo_.swap();
+    ofPopStyle();
   }
   
 protected:

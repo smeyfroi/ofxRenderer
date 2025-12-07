@@ -7,11 +7,13 @@ class LogisticFnShader : public Shader {
 
 public:
   void render(const ofBaseDraws& drawable, glm::vec4 clampFactor) {
+    ofPushStyle();
     ofEnableBlendMode(OF_BLENDMODE_ALPHA);
     shader.begin();
     shader.setUniform4f("clampFactor", clampFactor);
     drawable.draw(0, 0);
     shader.end();
+    ofPopStyle();
   }
   
   // clampFactor element == 0.0 means don't apply a Logistic Curve

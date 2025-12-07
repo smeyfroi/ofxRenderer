@@ -171,8 +171,10 @@ public:
   // NOTE: this is not used by the MarkSynth Fluid wrapper; it has dedicated Mods instead
   void applyImpulse(const FluidSimulation::Impulse& impulse) {
     flowValuesFboPtr->getSource().begin();
+    ofPushStyle();
     ofEnableBlendMode(OF_BLENDMODE_ADD);
     softCircleShader.render(impulse.position, impulse.radius, impulse.color * impulse.colorDensity);
+    ofPopStyle();
     flowValuesFboPtr->getSource().end();
 
     // Apply a radial velocity impulse directly via the shader,

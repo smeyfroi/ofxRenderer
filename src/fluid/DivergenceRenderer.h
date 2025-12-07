@@ -6,6 +6,8 @@ class DivergenceRenderer : public Renderer {
 
 public:
   void render(const ofBaseDraws& velocities_) override {
+    ofPushStyle();
+    ofEnableBlendMode(OF_BLENDMODE_DISABLED);
     fbo.begin();
     shader.begin();
     {
@@ -14,6 +16,7 @@ public:
     }
     shader.end();
     fbo.end();
+    ofPopStyle();
   }
 
 protected:

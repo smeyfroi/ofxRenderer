@@ -18,8 +18,9 @@ public:
     glm::vec2 centerUv = centerPx / size;
     float radiusUv = radiusPx / glm::min(size.x, size.y);
 
+    ofPushStyle();
     ofEnableBlendMode(OF_BLENDMODE_DISABLED);
-
+ 
     velocities.getTarget().begin();
     shader.begin();
     shader.setUniformTexture("tex0", velocities.getSource().getTexture(), 0);
@@ -31,6 +32,9 @@ public:
     shader.end();
     velocities.getTarget().end();
     velocities.swap();
+
+    ofPopStyle();
+
   }
 
 protected:

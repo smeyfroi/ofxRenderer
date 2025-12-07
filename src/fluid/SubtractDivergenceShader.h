@@ -6,6 +6,7 @@ class SubtractDivergenceShader : public Shader {
   
 public:
   void render(PingPongFbo& velocities_, ofFbo& pressures_) {
+    ofPushStyle();
     ofEnableBlendMode(OF_BLENDMODE_DISABLED);
     velocities_.getTarget().begin();
     {
@@ -18,6 +19,7 @@ public:
     }
     velocities_.getTarget().end();
     velocities_.swap();
+    ofPopStyle();
   }
   
 protected:
