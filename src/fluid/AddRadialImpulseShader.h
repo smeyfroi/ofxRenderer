@@ -2,7 +2,6 @@
 
 #include "Shader.h"
 #include "ofGraphics.h"
-#include "UnitQuadMesh.h"
 
 class AddRadialImpulseShader : public Shader {
 
@@ -28,7 +27,7 @@ public:
     shader.setUniform1f("radius", radiusUv);
     shader.setUniform1f("strength", strength);
     shader.setUniform1f("dt", dt);
-    quadMesh.draw({0.0f, 0.0f}, size);
+    velocities.getSource().draw(0, 0);
     shader.end();
     velocities.getTarget().end();
     velocities.swap();
@@ -78,7 +77,4 @@ protected:
                 }
                 );
   }
-
-private:
-  UnitQuadMesh quadMesh;
 };

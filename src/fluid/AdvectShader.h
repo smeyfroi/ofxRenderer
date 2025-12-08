@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Shader.h"
-#include "UnitQuadMesh.h"
 #include "ofUtils.h"
 
 class AdvectShader : public Shader {
@@ -17,7 +16,7 @@ public:
       shader.setUniformTexture("velocities", velocities, 2);
       shader.setUniform1f("dt", dt);
       shader.setUniform1f("dissipation", dissipation);
-      quadMesh.draw({ 0.0, 0.0 }, { values.getWidth(), values.getHeight() });
+      values.getSource().draw(0, 0);
     }
     shader.end();
     values.getTarget().end();
@@ -51,7 +50,4 @@ protected:
                 }
                 );
   }
-  
-private:
-  UnitQuadMesh quadMesh;
 };

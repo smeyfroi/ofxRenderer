@@ -8,7 +8,6 @@
 #pragma once
 
 #include "Shader.h"
-#include "UnitQuadMesh.h"
 
 // Discontinuous smear strategies selected via `strategy` uniform.
 // 0: off
@@ -79,7 +78,7 @@ public:
       shader.setUniform1f("ghostBlend", gridParams.ghostBlend);
       shader.setUniform2f("foldPeriod", gridParams.foldPeriod);
 
-      quadMesh.draw({ 0.0, 0.0 }, { fbo_.getWidth(), fbo_.getHeight() });
+      fbo_.getSource().draw(0, 0);
       shader.end();
     }
     fbo_.getTarget().end();
@@ -111,7 +110,7 @@ public:
       shader.setUniform1f("ghostBlend", gridParams.ghostBlend);
       shader.setUniform2f("foldPeriod", gridParams.foldPeriod);
 
-      quadMesh.draw({ 0.0, 0.0 }, { fbo_.getWidth(), fbo_.getHeight() });
+      fbo_.getSource().draw(0, 0);
       shader.end();
     }
     fbo_.getTarget().end();
@@ -142,7 +141,7 @@ public:
       shader.setUniform1f("ghostBlend", gridParams.ghostBlend);
       shader.setUniform2f("foldPeriod", gridParams.foldPeriod);
 
-      quadMesh.draw({ 0.0, 0.0 }, { fbo_.getWidth(), fbo_.getHeight() });
+      fbo_.getSource().draw(0, 0);
       shader.end();
     }
     fbo_.getTarget().end();
@@ -338,6 +337,5 @@ protected:
   }
 
 private:
-  UnitQuadMesh quadMesh;
   ofTexture emptyFieldTexture;
 };
