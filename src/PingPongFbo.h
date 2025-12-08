@@ -11,10 +11,12 @@ public:
   ~PingPongFbo() override {}
   
   void allocate(size_t width_, size_t height_, GLint internalFormat_) {
-    width = width_;
-    height = height_;
-    getSource().allocate(width, height, internalFormat_);
-    getTarget().allocate(width, height, internalFormat_);
+    ofFboSettings settings;
+    settings.width = width_;
+    settings.height = height_;
+    settings.internalformat = internalFormat_;
+    settings.textureTarget = GL_TEXTURE_2D;
+    allocate(settings);
   }
   
   void allocate(glm::vec2 size, GLint internalFormat, int wrap=GL_CLAMP_TO_EDGE, bool useStencil=false, int numSamples=0) {
@@ -27,7 +29,7 @@ public:
     settings.useStencil = useStencil; // TODO: probably enable this all the time once more Mods use it
     settings.numSamples = numSamples; // FIXME: this is more a function of the FBO user, but must be configured at FBO creation
     settings.useDepth = false; // NOTE: so far we don't use depth in MarkSynth
-//    settings.textureTarget = GL_TEXTURE_2D; // default is GL_TEXTURE_2D
+    settings.textureTarget = GL_TEXTURE_2D; // Explicit to ensure normalized texture coordinates
     allocate(settings);
   }
   

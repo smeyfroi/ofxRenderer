@@ -54,7 +54,7 @@ public:
     settings.numSamples = 0;
     settings.useDepth = false;
     settings.useStencil = false;
-//    settings.textureTarget = ofGetUsingArbTex() ? GL_TEXTURE_RECTANGLE_ARB : GL_TEXTURE_2D;
+    settings.textureTarget = GL_TEXTURE_2D; // Explicit to ensure normalized texture coordinates
     return settings;
   }
   
@@ -80,6 +80,7 @@ public:
 
   void setupInternals() {
     auto flowValuesSize = flowValuesFboPtr->getSize();
+    auto flowVelocitiesSize = flowVelocitiesFboPtr->getSize();
     
     valueAdvectShader.load();
     velocityAdvectShader.load();
@@ -87,15 +88,16 @@ public:
     valueJacobiShader.load();
     velocityJacobiShader.load();
 
-    divergenceRenderer.allocate(flowValuesSize.x, flowValuesSize.y);
+    // Velocity-related internal buffers use velocity FBO size
+    divergenceRenderer.allocate(flowVelocitiesSize.x, flowVelocitiesSize.y);
     divergenceRenderer.load();
 
-    pressuresFbo.allocate(flowValuesSize.x, flowValuesSize.y, GL_RGB32F);
+    pressuresFbo.allocate(flowVelocitiesSize.x, flowVelocitiesSize.y, GL_RGB32F);
     pressureJacobiShader.load();
 
     subtractDivergenceShader.load();
     
-    vorticityRenderer.allocate(flowValuesSize.x, flowValuesSize.y);
+    vorticityRenderer.allocate(flowVelocitiesSize.x, flowVelocitiesSize.y);
     vorticityRenderer.load();
     applyVorticityForceShader.load();
 

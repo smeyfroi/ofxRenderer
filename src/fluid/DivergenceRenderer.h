@@ -11,8 +11,8 @@ public:
     fbo.begin();
     shader.begin();
     {
-      shader.setUniform2f("texSize", glm::vec2(velocities_.getWidth(), velocities_.getHeight()));
-      velocities_.draw(0, 0);
+      shader.setUniform2f("texSize", glm::vec2(fbo.getWidth(), fbo.getHeight()));
+      velocities_.draw(0, 0, fbo.getWidth(), fbo.getHeight());
     }
     shader.end();
     fbo.end();
