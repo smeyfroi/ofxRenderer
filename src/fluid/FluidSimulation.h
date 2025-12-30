@@ -198,7 +198,7 @@ public:
 private:
   ofParameterGroup parameters;
 
-  ofParameter<float> dtParameter { "dt", 0.003, 0.001, 0.01 };
+  ofParameter<float> dtParameter { "dt", 0.0025, 0.001, 0.005 };
   ofParameter<float> vorticityParameter { "Vorticity", 50.0, 0.00, 100.0 };
   
   ofParameter<float> valueAdvectDissipationParameter = AdvectShader::createDissipationParameter("Value ", 0.999);
