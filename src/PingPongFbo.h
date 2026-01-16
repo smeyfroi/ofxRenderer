@@ -46,7 +46,9 @@ public:
   }
   
   ofFbo& getSource() { return fbos[1 - currentIndex]; }
+  const ofFbo& getSource() const { return fbos[1 - currentIndex]; }
   ofFbo& getTarget() { return fbos[currentIndex]; }
+  const ofFbo& getTarget() const { return fbos[currentIndex]; }
   void swap() { currentIndex = 1 - currentIndex; }
   
   void clearFloat(ofFloatColor color) {
@@ -73,7 +75,7 @@ public:
     draw(x, y, width, height);
   }
   void draw(float x, float y, float w, float h) const override {
-    fbos[1 - currentIndex].draw(x, y, w, h); // workaround inherited getSource non-constness
+    getSource().draw(x, y, w, h);
   }
   
   float getWidth() const override { return width; }

@@ -16,9 +16,9 @@ std::string drawModeToString(int mode) {
     case 0: return "Values";
     case 1: return "Velocity (XY)";
     case 2: return "Velocity (Magnitude)";
-    case 3: return "Divergence (pending Phase 2)";
-    case 4: return "Pressure (pending Phase 2)";
-    case 5: return "Curl (pending Phase 2)";
+    case 3: return "Divergence";
+    case 4: return "Pressure";
+    case 5: return "Curl";
     default: return "Unknown";
   }
 }
@@ -45,6 +45,7 @@ void ofApp::setup() {
   debugParameters.add(constantDriftParameter);
   debugParameters.add(driftVelocityParameter);
   debugParameters.add(velocityVizScaleParameter);
+  debugParameters.add(scalarVizScaleParameter);
 
   parameters.setName("Parameters");
   parameters.add(debugParameters);
@@ -115,10 +116,15 @@ void ofApp::draw() {
       drawVelocityMagnitude(velocitiesFbo.getSource().getTexture(), w, h);
       break;
     case DRAW_DIVERGENCE:
+      drawScalarField(fluidSimulation.getDivergenceTexture(), w, h);
+      break;
     case DRAW_PRESSURE:
+      drawScalarField(fluidSimulation.getPressureTexture(), w, h);
+      break;
     case DRAW_CURL:
+      drawScalarField(fluidSimulation.getCurlTexture(), w, h);
+      break;
     default:
-      // Phase 2 will add getters to draw these fields.
       fluidSimulation.draw(0, 0, w, h);
       break;
   }
@@ -138,7 +144,8 @@ void ofApp::draw() {
     ss << "Vel:    " << velTex.getWidth() << "x" << velTex.getHeight() << " format=" << glInternalFormatToString(velData.glInternalFormat)
        << " wrap=" << glWrapToString(velData.wrapModeHorizontal) << "," << glWrapToString(velData.wrapModeVertical)
        << " tex_u/t=" << ofToString(velData.tex_u, 3) << "," << ofToString(velData.tex_t, 3) << "\n";
-    ss << "Keys: [g] GUI  [i] info  [1-6] draw mode  [r] reload shaders";
+    ss << "Keys: [g] GUI  [i] info  [r] reload shaders\n";
+    ss << "Draw: [1] values  [2] velXY  [3] velMag  [4] div  [5] pressure  [6] curl";
 
     ofPushStyle();
     ofSetColor(255);
@@ -223,6 +230,19 @@ void main() {
 }
 )";
 
+  const std::string scalarVizFrag = R"(
+#version 410
+uniform sampler2D tex0;
+uniform float u_scale;
+in vec2 vTexCoord;
+out vec4 fragColor;
+void main() {
+  float v = texture(tex0, vTexCoord).r;
+  float mapped = clamp(v * u_scale * 0.5 + 0.5, 0.0, 1.0);
+  fragColor = vec4(mapped, mapped, mapped, 1.0);
+}
+)";
+
   auto compile = [](ofShader& shader, const std::string& vs, const std::string& fs) {
     shader.unload();
     const bool ok = shader.setupShaderFromSource(GL_VERTEX_SHADER, vs)
@@ -237,6 +257,7 @@ void main() {
   compile(addVelocityShader, vertex, addVelFrag);
   compile(velocityVizShader, vertex, velVizFrag);
   compile(velocityMagShader, vertex, velMagFrag);
+  compile(scalarVizShader, vertex, scalarVizFrag);
 }
 
 void ofApp::applyConstantVelocity(const glm::vec2& addVel) {
@@ -284,6 +305,20 @@ void ofApp::drawVelocityMagnitude(const ofTexture& velocityTex, float width, flo
   velocityMagShader.setUniform1f("u_scale", velocityVizScaleParameter.get());
   velocityTex.draw(0, 0, width, height);
   velocityMagShader.end();
+
+  ofPopStyle();
+}
+
+void ofApp::drawScalarField(const ofTexture& scalarTex, float width, float height) {
+  ofPushStyle();
+  ofEnableBlendMode(OF_BLENDMODE_DISABLED);
+  ofSetColor(255);
+
+  scalarVizShader.begin();
+  scalarVizShader.setUniformTexture("tex0", scalarTex, 0);
+  scalarVizShader.setUniform1f("u_scale", scalarVizScaleParameter.get());
+  scalarTex.draw(0, 0, width, height);
+  scalarVizShader.end();
 
   ofPopStyle();
 }

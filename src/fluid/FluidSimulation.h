@@ -1,7 +1,11 @@
 #pragma once
 
+#include <cmath>
 #include <memory>
+#include <string>
 
+#include "ofLog.h"
+#include "ofTexture.h"
 #include "ofxGui.h"
 #include "PingPongFbo.h"
 #include "AdvectShader.h"
@@ -58,7 +62,9 @@ public:
     return settings;
   }
   
-  bool isSetup() { return flowValuesFboPtr && flowVelocitiesFboPtr; }
+  bool isSetup() const { return flowValuesFboPtr && flowVelocitiesFboPtr; }
+  bool isValid() const { return isSetup() && valid; }
+  const std::string& getValidationError() const { return validationError; }
 
   void setup(glm::vec2 flowValuesSize) {
     flowValuesFboPtr = std::make_shared<PingPongFbo>();
@@ -69,16 +75,20 @@ public:
     flowVelocitiesFboPtr->allocate(createFboSettings(flowValuesSize, FLOAT_MODE));
     flowVelocitiesFboPtr->clearFloat(0.0, 0.0, 0.0, 0.0);
 
+    validateExternalBuffers();
     setupInternals();
   }
-  
+
   void setup(std::shared_ptr<PingPongFbo> flowValuesFboPtr_, std::shared_ptr<PingPongFbo> flowVelocitiesFboPtr_) {
-    flowValuesFboPtr = flowValuesFboPtr_;
-    flowVelocitiesFboPtr = flowVelocitiesFboPtr_;
+    flowValuesFboPtr = std::move(flowValuesFboPtr_);
+    flowVelocitiesFboPtr = std::move(flowVelocitiesFboPtr_);
+    validateExternalBuffers();
     setupInternals();
   }
 
   void setupInternals() {
+    if (!isValid()) return;
+
     auto flowValuesSize = flowValuesFboPtr->getSize();
     auto flowVelocitiesSize = flowVelocitiesFboPtr->getSize();
     
@@ -135,6 +145,8 @@ public:
   }
   
   void update() {
+    if (!isValid()) return;
+
     float dt = dtParameter.get();
     
     // advect
@@ -162,6 +174,7 @@ public:
   }
   
   void draw(float x, float y, float w, float h) {
+    if (!isValid()) return;
     ofBlendMode(OF_BLENDMODE_ALPHA);
     ofSetFloatColor(1.0, 1.0, 1.0, 1.0);
     flowValuesFboPtr->draw(x, y, w, h);
@@ -170,11 +183,17 @@ public:
 
   PingPongFbo& getFlowValuesFbo() { return *flowValuesFboPtr; }
   PingPongFbo& getFlowVelocitiesFbo() { return *flowVelocitiesFboPtr; }
+  const ofTexture& getDivergenceTexture() const { return divergenceRenderer.getFbo().getTexture(); }
+  const ofTexture& getPressureTexture() const { return pressuresFbo.getSource().getTexture(); }
+  const ofTexture& getCurlTexture() const { return vorticityRenderer.getFbo().getTexture(); }
 //  PingPongFbo& getTemperaturesFbo() { return temperaturesFbo; }
   
   // NOTE: this is not used by the MarkSynth Fluid wrapper; it has dedicated Mods instead
-  void applyImpulse(const FluidSimulation::Impulse& impulse) {
-    flowValuesFboPtr->getSource().begin();
+   void applyImpulse(const FluidSimulation::Impulse& impulse) {
+     if (!isValid()) return;
+
+     flowValuesFboPtr->getSource().begin();
+
     ofPushStyle();
     ofEnableBlendMode(OF_BLENDMODE_ADD);
     softCircleShader.render(impulse.position, impulse.radius, impulse.color * impulse.colorDensity);
@@ -195,8 +214,64 @@ public:
 //    addImpulseSpotShader.render(temperaturesFbo, impulse.position, impulse.radius, temperatureValue);
   }
   
-private:
+ private:
+  bool validateExternalBuffers() {
+    valid = false;
+    validationError.clear();
+
+    if (!flowValuesFboPtr || !flowVelocitiesFboPtr) {
+      validationError = "FluidSimulation requires non-null flowValues and flowVelocities buffers";
+      logValidationErrorOnce();
+      return false;
+    }
+
+    if (!flowValuesFboPtr->getSource().isAllocated() || !flowVelocitiesFboPtr->getSource().isAllocated()) {
+      validationError = "FluidSimulation requires allocated PingPongFbo sources (values/velocities)";
+      logValidationErrorOnce();
+      return false;
+    }
+
+    const auto validateTexture = [&](const ofTexture& tex, const char* label) -> bool {
+      const auto& data = tex.getTextureData();
+
+      if (data.textureTarget != GL_TEXTURE_2D) {
+        validationError = std::string("FluidSimulation requires GL_TEXTURE_2D textures (got target=") + ofToString(data.textureTarget)
+                          + ") for " + label;
+        return false;
+      }
+
+      const float eps = 1e-4f;
+      if (std::abs(data.tex_u - 1.0f) > eps || std::abs(data.tex_t - 1.0f) > eps) {
+        validationError = std::string("FluidSimulation requires normalized texcoords (tex_u=1, tex_t=1); got tex_u=")
+                          + ofToString(data.tex_u, 4) + " tex_t=" + ofToString(data.tex_t, 4) + " for " + label;
+        return false;
+      }
+
+      return true;
+    };
+
+    if (!validateTexture(flowValuesFboPtr->getSource().getTexture(), "values")) {
+      logValidationErrorOnce();
+      return false;
+    }
+
+    if (!validateTexture(flowVelocitiesFboPtr->getSource().getTexture(), "velocities")) {
+      logValidationErrorOnce();
+      return false;
+    }
+
+    valid = true;
+    return true;
+  }
+
+  void logValidationErrorOnce() {
+    if (validationLogged) return;
+    validationLogged = true;
+    ofLogError("FluidSimulation") << validationError;
+  }
+
   ofParameterGroup parameters;
+
 
   ofParameter<float> dtParameter { "dt", 0.0025, 0.001, 0.005 };
   ofParameter<float> vorticityParameter { "Vorticity", 50.0, 0.00, 100.0 };
@@ -214,6 +289,10 @@ private:
 //  ofParameter<float> gravityForceXParameter = ApplyBouyancyShader::createGravityForceXParameter();
 //  ofParameter<float> gravityForceYParameter = ApplyBouyancyShader::createGravityForceYParameter();
   
+
+  bool valid = false;
+  bool validationLogged = false;
+  std::string validationError;
 
   std::shared_ptr<PingPongFbo> flowValuesFboPtr;
   std::shared_ptr<PingPongFbo> flowVelocitiesFboPtr;

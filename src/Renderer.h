@@ -41,6 +41,7 @@ public:
   float getWidth() const override { return width; }
   float getHeight() const override { return height; }
   ofFbo& getFbo() { return fbo; }
+  const ofFbo& getFbo() const { return fbo; }
 
 protected:
   float width, height;

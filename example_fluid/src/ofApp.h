@@ -26,6 +26,7 @@ private:
   void applyConstantVelocity(const glm::vec2& addVel);
   void drawVelocityXY(const ofTexture& velocityTex, float width, float height);
   void drawVelocityMagnitude(const ofTexture& velocityTex, float width, float height);
+  void drawScalarField(const ofTexture& scalarTex, float width, float height);
 
   static std::string glWrapToString(GLint wrap);
   static std::string glInternalFormatToString(GLint internalFormat);
@@ -53,9 +54,11 @@ private:
   ofParameter<glm::vec2> driftVelocityParameter { "Drift Velocity", { 0.0f, 0.0f }, { -2.0f, -2.0f }, { 2.0f, 2.0f } };
 
   ofParameter<float> velocityVizScaleParameter { "Velocity Viz Scale", 2.0f, 0.01f, 20.0f };
+  ofParameter<float> scalarVizScaleParameter { "Scalar Viz Scale", 50.0f, 0.01f, 500.0f };
 
   ofShader addVelocityShader;
   ofShader velocityVizShader;
   ofShader velocityMagShader;
+  ofShader scalarVizShader;
 };
 
