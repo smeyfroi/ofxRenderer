@@ -14,6 +14,7 @@
 #include "SubtractDivergenceShader.h"
 #include "VorticityRenderer.h"
 #include "ApplyVorticityForceShader.h"
+#include "VelocityBoundaryShader.h"
 //#include "ApplyBouyancyShader.h"
 #include "AddRadialImpulseShader.h"
 #include "SoftCircleShader.h"
@@ -50,8 +51,9 @@ public:
   
   auto createFboSettings(glm::vec2 size, GLint internalFormat) {
     ofFboSettings settings;
-    settings.wrapModeVertical = GL_REPEAT;
-    settings.wrapModeHorizontal = GL_REPEAT;
+    const GLint wrap = getExpectedWrapMode();
+    settings.wrapModeVertical = wrap;
+    settings.wrapModeHorizontal = wrap;
     settings.width = size.x;
     settings.height = size.y;
     settings.internalformat = internalFormat;
@@ -67,6 +69,9 @@ public:
   const std::string& getValidationError() const { return validationError; }
 
   void setup(glm::vec2 flowValuesSize) {
+    ownsFlowBuffers = true;
+    lastBoundaryMode = boundaryModeParameter.get();
+
     flowValuesFboPtr = std::make_shared<PingPongFbo>();
     flowValuesFboPtr->allocate(createFboSettings(flowValuesSize, FLOAT_A_MODE));
     flowValuesFboPtr->clearFloat(0.0, 0.0, 0.0, 0.0);
@@ -80,6 +85,9 @@ public:
   }
 
   void setup(std::shared_ptr<PingPongFbo> flowValuesFboPtr_, std::shared_ptr<PingPongFbo> flowVelocitiesFboPtr_) {
+    ownsFlowBuffers = false;
+    lastBoundaryMode = boundaryModeParameter.get();
+
     flowValuesFboPtr = std::move(flowValuesFboPtr_);
     flowVelocitiesFboPtr = std::move(flowVelocitiesFboPtr_);
     validateExternalBuffers();
@@ -111,6 +119,8 @@ public:
     vorticityRenderer.load();
     applyVorticityForceShader.load();
 
+    velocityBoundaryShader.load();
+
 //    temperaturesFbo.allocate(flowValuesSize.x, flowValuesSize.y, GL_RGB32F);
 //    temperaturesFbo.getSource().begin();
 //    ofClear(ofFloatColor(ambientTemperatureParameter));
@@ -119,6 +129,8 @@ public:
     
     addRadialImpulseShader.load();
     softCircleShader.load();
+
+    applyExpectedWrapModeToInternalBuffers();
   }
 
   std::string getParameterGroupName() { return "Fluid Simulation"; }
@@ -126,6 +138,7 @@ public:
   ofParameterGroup& getParameterGroup() {
     if (parameters.size() == 0) {
       parameters.setName(getParameterGroupName());
+      parameters.add(boundaryModeParameter);
       parameters.add(dtParameter);
       parameters.add(vorticityParameter);
       parameters.add(valueAdvectDissipationParameter);
@@ -145,24 +158,37 @@ public:
   }
   
   void update() {
+    if (!isSetup()) return;
+
+    const int boundaryMode = boundaryModeParameter.get();
+    if (boundaryMode != lastBoundaryMode) {
+      lastBoundaryMode = boundaryMode;
+      validateExternalBuffers();
+    }
+
     if (!isValid()) return;
 
     float dt = dtParameter.get();
-    
+
     // advect
     velocityAdvectShader.render(*flowVelocitiesFboPtr, flowVelocitiesFboPtr->getSource().getTexture(), dt, velocityAdvectDissipationParameter.get());
+    applyVelocityBoundariesIfNeeded();
+
 //    temperaturesAdvectShader.render(temperaturesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter, temperatureAdvectDissipationParameter);
     valueAdvectShader.render(*flowValuesFboPtr, flowVelocitiesFboPtr->getSource().getTexture(), dt, valueAdvectDissipationParameter.get());
-    
+
 //    applyBouyancyShader.render(flowVelocitiesFbo, temperaturesFbo, flowValuesFbo, dtParameter, ambientTemperatureParameter, smokeBouyancyParameter, smokeWeightParameter, gravityForceXParameter, gravityForceYParameter);
 
     // diffuse
     velocityJacobiShader.render(*flowVelocitiesFboPtr, flowVelocitiesFboPtr->getSource().getTexture(), dt, 1.0E-3, 0.25, velocityDiffusionIterationsParameter.get());
+    applyVelocityBoundariesIfNeeded();
+
     valueJacobiShader.render(*flowValuesFboPtr, flowValuesFboPtr->getSource().getTexture(), dt, -1.0E-10, 0.25, valueDiffusionIterationsParameter.get());
-    
+
     // add forces
     vorticityRenderer.render(flowVelocitiesFboPtr->getSource());
     applyVorticityForceShader.render(*flowVelocitiesFboPtr, vorticityRenderer.getFbo(), vorticityParameter.get(), dt);
+    applyVelocityBoundariesIfNeeded();
 
     // compute
     divergenceRenderer.render(flowVelocitiesFboPtr->getSource());
@@ -171,6 +197,7 @@ public:
     pressuresFbo.getSource().end();
     pressureJacobiShader.render(pressuresFbo, divergenceRenderer.getFbo().getTexture(), dt, -1.0, 0.25, pressureDiffusionIterationsParameter.get()); // alpha should be -cellSize * cellSize
     subtractDivergenceShader.render(*flowVelocitiesFboPtr, pressuresFbo.getSource());
+    applyVelocityBoundariesIfNeeded();
   }
   
   void draw(float x, float y, float w, float h) {
@@ -215,9 +242,71 @@ public:
   }
   
  private:
+  static const char* boundaryModeToString(int mode) {
+    switch (mode) {
+      case 0: return "SolidWalls";
+      case 1: return "Wrap";
+      case 2: return "Open";
+      default: return "Unknown";
+    }
+  }
+
+  static const char* wrapModeToString(GLint wrap) {
+    switch (wrap) {
+      case GL_CLAMP_TO_EDGE: return "GL_CLAMP_TO_EDGE";
+      case GL_REPEAT: return "GL_REPEAT";
+      case GL_MIRRORED_REPEAT: return "GL_MIRRORED_REPEAT";
+      default: return "(unknown)";
+    }
+  }
+
+  GLint getExpectedWrapMode() const {
+    switch (boundaryModeParameter.get()) {
+      case 0: return GL_CLAMP_TO_EDGE;
+      case 1: return GL_REPEAT;
+      case 2: return GL_CLAMP_TO_EDGE;
+      default: return GL_CLAMP_TO_EDGE;
+    }
+  }
+
+  void setFboWrap(ofFbo& fbo, GLint wrap) {
+    if (!fbo.isAllocated()) return;
+    fbo.getTexture().setTextureWrap(wrap, wrap);
+  }
+
+  void applyExpectedWrapModeToInternalBuffers() {
+    const GLint wrap = getExpectedWrapMode();
+
+    // These buffers are always owned by the simulation.
+    setFboWrap(pressuresFbo.getSource(), wrap);
+    setFboWrap(pressuresFbo.getTarget(), wrap);
+    setFboWrap(divergenceRenderer.getFbo(), wrap);
+    setFboWrap(vorticityRenderer.getFbo(), wrap);
+  }
+
+  void applyExpectedWrapModeToFlowBuffersIfOwned() {
+    if (!ownsFlowBuffers) return;
+    if (!flowValuesFboPtr || !flowVelocitiesFboPtr) return;
+
+    const GLint wrap = getExpectedWrapMode();
+    setFboWrap(flowValuesFboPtr->getSource(), wrap);
+    setFboWrap(flowValuesFboPtr->getTarget(), wrap);
+    setFboWrap(flowVelocitiesFboPtr->getSource(), wrap);
+    setFboWrap(flowVelocitiesFboPtr->getTarget(), wrap);
+  }
+
+  void applyVelocityBoundariesIfNeeded() {
+    if (boundaryModeParameter.get() != 0) return; // SolidWalls only for now
+    velocityBoundaryShader.render(*flowVelocitiesFboPtr);
+  }
+
   bool validateExternalBuffers() {
     valid = false;
+    validationLogged = false;
     validationError.clear();
+
+    applyExpectedWrapModeToFlowBuffersIfOwned();
+    applyExpectedWrapModeToInternalBuffers();
 
     if (!flowValuesFboPtr || !flowVelocitiesFboPtr) {
       validationError = "FluidSimulation requires non-null flowValues and flowVelocities buffers";
@@ -230,6 +319,9 @@ public:
       logValidationErrorOnce();
       return false;
     }
+
+    const int boundaryMode = boundaryModeParameter.get();
+    const GLint expectedWrap = getExpectedWrapMode();
 
     const auto validateTexture = [&](const ofTexture& tex, const char* label) -> bool {
       const auto& data = tex.getTextureData();
@@ -244,6 +336,13 @@ public:
       if (std::abs(data.tex_u - 1.0f) > eps || std::abs(data.tex_t - 1.0f) > eps) {
         validationError = std::string("FluidSimulation requires normalized texcoords (tex_u=1, tex_t=1); got tex_u=")
                           + ofToString(data.tex_u, 4) + " tex_t=" + ofToString(data.tex_t, 4) + " for " + label;
+        return false;
+      }
+
+      if (data.wrapModeHorizontal != expectedWrap || data.wrapModeVertical != expectedWrap) {
+        validationError = std::string("FluidSimulation boundary mode ") + boundaryModeToString(boundaryMode) + " requires "
+                          + wrapModeToString(expectedWrap) + " wrap; got " + wrapModeToString(data.wrapModeHorizontal) + ","
+                          + wrapModeToString(data.wrapModeVertical) + " for " + label;
         return false;
       }
 
@@ -272,6 +371,9 @@ public:
 
   ofParameterGroup parameters;
 
+  // Boundary mode is currently used primarily for validation + velocity wall handling.
+  // 0: SolidWalls, 1: Wrap, 2: Open
+  ofParameter<int> boundaryModeParameter { "Boundary Mode", 0, 0, 2 };
 
   ofParameter<float> dtParameter { "dt", 0.0025, 0.001, 0.005 };
   ofParameter<float> vorticityParameter { "Vorticity", 50.0, 0.00, 100.0 };
@@ -294,6 +396,9 @@ public:
   bool validationLogged = false;
   std::string validationError;
 
+  bool ownsFlowBuffers = false;
+  int lastBoundaryMode = 0;
+
   std::shared_ptr<PingPongFbo> flowValuesFboPtr;
   std::shared_ptr<PingPongFbo> flowVelocitiesFboPtr;
 //  PingPongFbo temperaturesFbo;
@@ -308,6 +413,7 @@ public:
   SubtractDivergenceShader subtractDivergenceShader;
   VorticityRenderer vorticityRenderer;
   ApplyVorticityForceShader applyVorticityForceShader;
+  VelocityBoundaryShader velocityBoundaryShader;
 //  ApplyBouyancyShader applyBouyancyShader;
   
   SoftCircleShader softCircleShader;
