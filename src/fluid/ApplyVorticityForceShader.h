@@ -32,11 +32,12 @@ protected:
                 uniform vec2 texSize;
                 uniform float dt;
                 uniform float vorticityStrength;
-                in vec2 texCoordVarying;
                 out vec4 fragColor;
 
                 void main(){
-                  vec2 xy = texCoordVarying.xy;
+                  vec2 xy = gl_FragCoord.xy / texSize;
+                  xy.y = 1.0 - xy.y;
+
                   vec2 oldV = texture(tex0, xy).xy;
 
                   vec2 off = vec2(1.0, 0.0) / texSize;
