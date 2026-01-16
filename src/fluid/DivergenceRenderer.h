@@ -22,13 +22,14 @@ public:
 protected:
   std::string getFragmentShader() override {
     return GLSL(
-                uniform sampler2D tex0; // velocities
-                uniform vec2 texSize;
-                out vec4 fragColor;
+                 uniform sampler2D tex0; // velocities
+                 uniform vec2 texSize;
+                 in vec2 texCoordVarying;
+                 out vec4 fragColor;
 
-                void main(){
-                  vec2 xy = gl_FragCoord.xy / texSize;
-                  xy.y = 1.0 - xy.y;
+                 void main(){
+                   vec2 xy = texCoordVarying.xy;
+
 
                   vec2 off = vec2(1.0, 0.0) / texSize;
 

@@ -26,16 +26,15 @@ public:
 protected:
   std::string getFragmentShader() override {
     return GLSL(
-                uniform sampler2D tex0;
-                uniform vec2 texSize;
-                out vec4 fragColor;
+                 uniform sampler2D tex0;
+                 uniform vec2 texSize;
+                 in vec2 texCoordVarying;
+                 out vec4 fragColor;
 
-                void main() {
-                  // Use pixel-space domain to avoid dependency on incoming texcoords.
-                  vec2 uv = gl_FragCoord.xy / texSize;
-                  uv.y = 1.0 - uv.y;
+                 void main() {
+                   vec2 uv = texCoordVarying.xy;
+                   vec2 v = texture(tex0, uv).xy;
 
-                  vec2 v = texture(tex0, uv).xy;
 
                   // gl_FragCoord is bottom-left origin in pixel space.
                   // First/last column/row are considered boundaries.

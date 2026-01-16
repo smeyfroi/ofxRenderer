@@ -14,7 +14,6 @@ public:
     {
       shader.setUniformTexture("tex0", values.getSource().getTexture(), 1);
       shader.setUniformTexture("velocities", velocities, 2);
-      shader.setUniform2f("texSize", glm::vec2(values.getWidth(), values.getHeight()));
       shader.setUniform1f("dt", dt);
       shader.setUniform1f("dissipation", dissipation);
       values.getSource().draw(0, 0);
@@ -35,14 +34,13 @@ protected:
                 uniform sampler2D tex0; // previous values
                 uniform sampler2D velocities;
 //                uniform sampler2D obstacleDensities;
-                uniform vec2 texSize;
                 uniform float dt;
                 uniform float dissipation;
+                in vec2 texCoordVarying;
                 out vec4 fragColor;
 
                 void main() {
-                  vec2 xy = gl_FragCoord.xy / texSize;
-                  xy.y = 1.0 - xy.y;
+                  vec2 xy = texCoordVarying.xy;
 
                   vec2 velocity = texture(velocities, xy).xy;
                   vec2 fromXy = xy - dt * velocity;
