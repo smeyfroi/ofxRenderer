@@ -239,16 +239,15 @@ public:
                              valueDissipation,
                              valueMaxParameter.get());
 
-    // diffuse (dt/dx-correct)
+    // diffuse (resolution-independent in cell units)
     debugStepInfo.velocitySpreadCoeff = applyDiffusionIfEnabled(*flowVelocitiesFboPtr,
                                                                velocityJacobiShader,
                                                                velocityDiffusionSourceFbo,
                                                                velocitySpreadParameter.get(),
                                                                dt,
-                                                               dx,
                                                                velocityDiffusionIterationsParameter.get(),
-                                                               1.0e-7f,
-                                                               5.0e-4f);
+                                                               1.0e-4f,
+                                                               80.0f);
     applyVelocityBoundariesIfNeeded();
 
     debugStepInfo.valueSpreadCoeff = applyDiffusionIfEnabled(*flowValuesFboPtr,
@@ -256,10 +255,9 @@ public:
                                                             valueDiffusionSourceFbo,
                                                             valueSpreadParameter.get(),
                                                             dt,
-                                                            dx,
                                                             valueDiffusionIterationsParameter.get(),
-                                                            1.0e-8f,
-                                                            5.0e-4f);
+                                                            1.0e-4f,
+                                                            1500.0f);
 
     // add forces
     vorticityRenderer.render(flowVelocitiesFboPtr->getSource());
@@ -452,28 +450,36 @@ public:
     return std::exp(std::log(0.5f) * (frameDt / halfLife));
   }
 
-  static float spreadToCoefficient(float spread, float minCoeff, float maxCoeff) {
+  static float spreadToDiffusionRateCells(float spread, float minRateCells, float maxRateCells) {
+    // Treat spread as a diffusion/viscosity rate in "cell units" (cells^2 per step-second).
+    // This keeps behavior far more consistent across resolutions because `a = dt * rateCells`.
     const float s0 = std::clamp(spread, 0.0f, 1.0f);
     if (s0 <= 0.0f) return 0.0f;
 
-    // Make mid-range values noticeably effective without requiring the top 5% of the knob.
     const float s = std::sqrt(s0);
 
-    const float logMin = std::log(minCoeff);
-    const float logMax = std::log(maxCoeff);
+    const float minR = std::max(1.0e-9f, minRateCells);
+    const float maxR = std::max(minR, maxRateCells);
+
+    const float logMin = std::log(minR);
+    const float logMax = std::log(maxR);
     return std::exp(logMin + (logMax - logMin) * s);
   }
 
-  static bool diffusionToJacobiParams(float coeff, float dt, float dx, float& alpha, float& rBeta) {
-    if (coeff <= 0.0f || dt <= 0.0f || dx <= 0.0f) return false;
+  static bool diffusionToJacobiParams(float rateCells, float dt, float& alpha, float& rBeta) {
+    if (rateCells <= 0.0f || dt <= 0.0f) return false;
 
-    const float invDx2 = 1.0f / (dx * dx);
-    const float a = dt * coeff * invDx2;
+    // Here `rateCells` is the classic a = nu * dt / dx^2 expressed in cell units.
+    // Our Jacobi shader computes: x_new = (sum(neighbors) + alpha * x0) * rBeta.
+    // To match the standard implicit diffusion solve:
+    //   x_new = (x0/a + sum(neighbors)) / (4 + 1/a)
+    // so alpha = 1/a and rBeta = 1/(4 + 1/a).
+    const float a = dt * rateCells;
     if (a <= 1.0e-9f) return false;
 
-    // For diffusion: x_new = (sum(neighbors) + a * x0) / (4 + a)
-    alpha = a;
-    rBeta = 1.0f / (4.0f + a);
+    const float invA = 1.0f / a;
+    alpha = invA;
+    rBeta = 1.0f / (4.0f + invA);
     return true;
   }
 
@@ -482,20 +488,19 @@ public:
                                        ofFbo& diffusionSource,
                                        float spread,
                                        float dt,
-                                       float dx,
                                        int iterations,
-                                       float minCoeff,
-                                       float maxCoeff) {
+                                       float minRateCells,
+                                       float maxRateCells) {
     if (iterations <= 0) return 0.0f;
 
-    const float coeff = spreadToCoefficient(spread, minCoeff, maxCoeff);
+    const float rateCells = spreadToDiffusionRateCells(spread, minRateCells, maxRateCells);
     float alpha = 0.0f;
     float rBeta = 0.0f;
-    if (!diffusionToJacobiParams(coeff, dt, dx, alpha, rBeta)) return 0.0f;
+    if (!diffusionToJacobiParams(rateCells, dt, alpha, rBeta)) return 0.0f;
 
     copyToFbo(field.getSource(), diffusionSource);
     solver.render(field, diffusionSource.getTexture(), dt, alpha, rBeta, iterations);
-    return coeff;
+    return rateCells;
   }
 
   void applyVelocityBoundariesIfNeeded() {
