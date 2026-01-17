@@ -45,8 +45,8 @@ private:
 
   ofParameter<bool> autoImpulseParameter { "Auto Impulse", false };
   ofParameter<float> autoImpulsePerSecondParameter { "Auto Impulses/s", 2.0f, 0.0f, 30.0f };
-  ofParameter<float> autoImpulseRadiusPxParameter { "Auto Impulse Radius Px", 50.0f, 1.0f, 600.0f };
-  ofParameter<float> autoImpulseRadialVelocityParameter { "Auto Impulse Radial Vel", 10.0f, -50.0f, 50.0f };
+  ofParameter<float> autoImpulseRadiusPxParameter { "Auto Impulse Radius Px", 35.0f, 1.0f, 600.0f };
+  ofParameter<float> autoImpulseRadialVelocityParameter { "Auto Impulse Radial Vel", 1.5f, -50.0f, 50.0f };
   ofParameter<float> autoImpulseColorAlphaParameter { "Auto Impulse Alpha", 0.08f, 0.0f, 1.0f };
   float autoImpulseAccumulator = 0.0f;
 

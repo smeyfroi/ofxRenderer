@@ -36,16 +36,18 @@ protected:
                    vec2 v = texture(tex0, uv).xy;
 
 
-                  // gl_FragCoord is bottom-left origin in pixel space.
-                  // First/last column/row are considered boundaries.
-                  float px = gl_FragCoord.x;
-                  float py = gl_FragCoord.y;
+                  // Determine boundary pixels in the same coordinate convention as all other fluid passes.
+                  // `texCoordVarying` is the UV used for sampling and can be flipped by OF depending on texture state.
+                  // Convert UV back into pixel-center coordinates: [0.5 .. width-0.5].
+                  float px = uv.x * texSize.x;
+                  float py = uv.y * texSize.y;
 
-                  if (px < 1.5 || px > texSize.x - 0.5) {
+                  // Use +/- 1.5 so we reliably hit the first/last pixel columns.
+                  if (px < 1.5 || px > texSize.x - 1.5) {
                     v.x = 0.0;
                   }
 
-                  if (py < 1.5 || py > texSize.y - 0.5) {
+                  if (py < 1.5 || py > texSize.y - 1.5) {
                     v.y = 0.0;
                   }
 

@@ -27,6 +27,12 @@ public:
     shader.setUniform1f("radius", radiusUv);
     shader.setUniform1f("strength", strength);
     shader.setUniform1f("dt", dt);
+
+    const float minDim = std::min(size.x, size.y);
+    const float dx = 1.0f / std::max(1.0f, minDim);
+    const float maxDisp = 4.0f * dx;
+    shader.setUniform1f("maxDisp", maxDisp);
+
     velocities.getSource().draw(0, 0);
     shader.end();
     velocities.getTarget().end();
@@ -44,6 +50,7 @@ protected:
                 uniform float radius;    // UV space
                 uniform float strength;
                 uniform float dt;
+                uniform float maxDisp; // UV units (domain lengths)
                 in vec2 texCoordVarying;
                 out vec4 fragColor;
 
@@ -66,11 +73,12 @@ protected:
 
                   vec2 vNew = oldV + impulse;
 
-                  // Clamp to keep velocities bounded.
-                  float maxSpeed = 5.0; // tune as needed
+                  // Clamp by displacement per step (CFL-style): dt * |v| should not move too many cells.
+                  // This makes stability much more resolution- and dt-independent.
                   float speed = length(vNew);
-                  if (speed > maxSpeed) {
-                    vNew *= maxSpeed / speed;
+                  float disp = speed * dt;
+                  if (disp > maxDisp && disp > 0.0) {
+                    vNew *= maxDisp / disp;
                   }
 
                   fragColor = vec4(vNew, 0.0, 0.0);

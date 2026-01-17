@@ -85,7 +85,7 @@ void ofApp::update() {
     FluidSimulation::Impulse impulse {
       { ofGetMouseX() * SCALE, ofGetMouseY() * SCALE },
       autoImpulseRadiusPxParameter.get() * SCALE,
-      glm::vec2 { (ofGetMouseX() - ofGetPreviousMouseX()) * 0.005f, (ofGetMouseY() - ofGetPreviousMouseY()) * 0.005f } * SCALE,
+      glm::vec2 { (ofGetMouseX() - ofGetPreviousMouseX()) * 0.001f, (ofGetMouseY() - ofGetPreviousMouseY()) * 0.001f } * SCALE,
       autoImpulseRadialVelocityParameter.get() * SCALE,
       ofFloatColor(0.2f + ofRandom(0.4f), 0.05f + ofRandom(0.3f), 0.1f + ofRandom(0.3f), autoImpulseColorAlphaParameter.get()),
       1.0f,
@@ -234,10 +234,12 @@ void main() {
 #version 410
 uniform sampler2D tex0;
 uniform float u_scale;
+uniform float u_abs;
 in vec2 vTexCoord;
 out vec4 fragColor;
 void main() {
   float v = texture(tex0, vTexCoord).r;
+  v = mix(v, abs(v), clamp(u_abs, 0.0, 1.0));
   float mapped = clamp(v * u_scale * 0.5 + 0.5, 0.0, 1.0);
   fragColor = vec4(mapped, mapped, mapped, 1.0);
 }
@@ -317,6 +319,7 @@ void ofApp::drawScalarField(const ofTexture& scalarTex, float width, float heigh
   scalarVizShader.begin();
   scalarVizShader.setUniformTexture("tex0", scalarTex, 0);
   scalarVizShader.setUniform1f("u_scale", scalarVizScaleParameter.get());
+  scalarVizShader.setUniform1f("u_abs", drawModeParameter.get() == DRAW_CURL ? 1.0f : 0.0f);
   scalarTex.draw(0, 0, width, height);
   scalarVizShader.end();
 

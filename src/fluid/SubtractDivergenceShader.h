@@ -11,8 +11,10 @@ public:
     velocities_.getTarget().begin();
     {
       shader.begin();
+      const float gridSize = std::min(velocities_.getWidth(), velocities_.getHeight());
       shader.setUniformTexture("pressures", pressures_.getTexture(), 1);
       shader.setUniform2f("texSize", glm::vec2(velocities_.getWidth(), velocities_.getHeight()));
+      shader.setUniform1f("halfInvDx", 0.5f * gridSize);
       ofSetColor(255);
       velocities_.getSource().draw(0, 0);
       shader.end();
@@ -28,6 +30,7 @@ protected:
                 uniform sampler2D tex0; // velocities
                 uniform sampler2D pressures;
                 uniform vec2 texSize;
+                uniform float halfInvDx;
                 in vec2 texCoordVarying;
                 out vec4 fragColor;
 
@@ -42,7 +45,7 @@ protected:
                   float pS = texture(pressures, xy-off.yx).r;
                   float pE = texture(pressures, xy+off.xy).r;
                   float pW = texture(pressures, xy-off.xy).r;
-                  vec2 grad = vec2(pE - pW, pN - pS) * 0.5;
+                  vec2 grad = vec2(pE - pW, pN - pS) * halfInvDx;
                   
                   vec2 oldV = texture(tex0, xy).xy;
                   vec2 newV = oldV - grad;

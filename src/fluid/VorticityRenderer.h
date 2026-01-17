@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 #include "Renderer.h"
 
 class VorticityRenderer : public Renderer {
@@ -12,7 +14,9 @@ public:
     ofEnableBlendMode(OF_BLENDMODE_DISABLED);
     fbo.begin();
     shader.begin();
+    const float gridSize = std::min(fbo.getWidth(), fbo.getHeight());
     shader.setUniform2f("texSize", glm::vec2(fbo.getWidth(), fbo.getHeight()));
+    shader.setUniform1f("halfInvDx", 0.5f * gridSize);
     velocities_.draw(0, 0, fbo.getWidth(), fbo.getHeight());
     shader.end();
     fbo.end();
@@ -24,6 +28,7 @@ protected:
     return GLSL(
                  uniform sampler2D tex0;
                  uniform vec2 texSize;
+                 uniform float halfInvDx;
                  in vec2 texCoordVarying;
                  out vec4 fragColor;
 
@@ -38,10 +43,11 @@ protected:
                   vec2 vE = texture(tex0, xy+off.xy).xy;
                   vec2 vW = texture(tex0, xy-off.xy).xy;
                   
-                  float dfx = vE.x - vW.x;
-                  float dfy = vN.y - vS.y;
+                  float dVyDx = vE.y - vW.y;
+                  float dVxDy = vN.x - vS.x;
 
-                  fragColor.x = 0.5 * (dfy - dfx);
+                  // 2D curl (z component): curl = dVy/dx - dVx/dy
+                  fragColor.r = (dVyDx - dVxDy) * halfInvDx;
                 }
                 );
   }

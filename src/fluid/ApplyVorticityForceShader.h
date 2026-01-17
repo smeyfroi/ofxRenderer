@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 #include "Shader.h"
 
 class ApplyVorticityForceShader : public Shader {
@@ -11,10 +13,14 @@ public:
     velocities_.getTarget().begin();
     {
       shader.begin();
+      const float gridSize = std::min(velocities_.getWidth(), velocities_.getHeight());
       shader.setUniformTexture("curls", curls_.getTexture(), 1);
       shader.setUniform2f("texSize", glm::vec2(velocities_.getWidth(), velocities_.getHeight()));
-      shader.setUniform1f("vorticityStrength", vorticityStrength_);
-      shader.setUniform1f("dt", dt_);
+       const float dx = 1.0f / std::max(1.0f, gridSize);
+       shader.setUniform1f("halfInvDx", 0.5f * gridSize);
+       shader.setUniform1f("dx", dx);
+       shader.setUniform1f("vorticityStrength", vorticityStrength_);
+       shader.setUniform1f("dt", dt_);
       ofSetColor(255);
       velocities_.getSource().draw(0, 0);
       shader.end();
@@ -30,6 +36,8 @@ protected:
                 uniform sampler2D tex0; // velocities
                 uniform sampler2D curls;
                 uniform vec2 texSize;
+                uniform float halfInvDx;
+                uniform float dx;
                 uniform float dt;
                 uniform float vorticityStrength;
                 in vec2 texCoordVarying;
@@ -41,15 +49,22 @@ protected:
                   vec2 oldV = texture(tex0, xy).xy;
 
                   vec2 off = vec2(1.0, 0.0) / texSize;
-                  float curlN = abs(texture(curls, xy+off.yx).x);
-                  float curlS = abs(texture(curls, xy-off.yx).x);
-                  float curlE = abs(texture(curls, xy+off.xy).x);
-                  float curlW = abs(texture(curls, xy-off.xy).x);
+                  float curlN = abs(texture(curls, xy + off.yx).x);
+                  float curlS = abs(texture(curls, xy - off.yx).x);
+                  float curlE = abs(texture(curls, xy + off.xy).x);
+                  float curlW = abs(texture(curls, xy - off.xy).x);
                   float curlC = texture(curls, xy).x;
-                  
-                  vec2 dw = normalize(0.5 * vec2(curlN - curlS, curlE - curlW) + 0.000001) * vec2(-1, 1);
-                  
-                  vec2 fvc = dw * curlC * dt * vorticityStrength;
+
+                  vec2 grad = vec2(curlE - curlW, curlN - curlS) * halfInvDx;
+
+                  // Normalize without introducing a directional bias.
+                  float gradLen = length(grad);
+                  vec2 N = (gradLen > 1e-6) ? (grad / gradLen) : vec2(0.0);
+
+                  // 2D vorticity confinement force: (N x omega)
+                  // omega is curlC in the z direction.
+                  // Scale by dx so the artist-facing vorticity strength stays roughly resolution-independent.
+                  vec2 fvc = vec2(N.y, -N.x) * curlC * dt * vorticityStrength * dx;
 
                   fragColor = vec4(oldV + fvc, 0.0, 0.0);
                 }

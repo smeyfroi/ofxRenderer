@@ -1,9 +1,11 @@
 #pragma once
 
+#include <algorithm>
 #include <cmath>
 #include <memory>
 #include <string>
 
+#include "ofAppRunner.h" // ofGetLastFrameTime()
 #include "ofLog.h"
 #include "ofTexture.h"
 #include "ofxGui.h"
@@ -15,6 +17,7 @@
 #include "VorticityRenderer.h"
 #include "ApplyVorticityForceShader.h"
 #include "VelocityBoundaryShader.h"
+#include "VelocityCflClampShader.h"
 //#include "ApplyBouyancyShader.h"
 #include "AddRadialImpulseShader.h"
 #include "SoftCircleShader.h"
@@ -120,6 +123,7 @@ public:
     applyVorticityForceShader.load();
 
     velocityBoundaryShader.load();
+    velocityCflClampShader.load();
 
 //    temperaturesFbo.allocate(flowValuesSize.x, flowValuesSize.y, GL_RGB32F);
 //    temperaturesFbo.getSource().begin();
@@ -167,9 +171,10 @@ public:
     }
 
     if (!isValid()) return;
-
-    float dt = dtParameter.get();
-
+ 
+    const float frameDt = static_cast<float>(ofGetLastFrameTime());
+    const float dt = dtParameter.get() * frameDt;
+ 
     // advect
     velocityAdvectShader.render(*flowVelocitiesFboPtr, flowVelocitiesFboPtr->getSource().getTexture(), dt, velocityAdvectDissipationParameter.get());
     applyVelocityBoundariesIfNeeded();
@@ -187,15 +192,28 @@ public:
 
     // add forces
     vorticityRenderer.render(flowVelocitiesFboPtr->getSource());
-    applyVorticityForceShader.render(*flowVelocitiesFboPtr, vorticityRenderer.getFbo(), vorticityParameter.get(), dt);
+    constexpr float VORTICITY_MAX = 50.0f;
+    const float vorticityStrength = vorticityParameter.get() * VORTICITY_MAX;
+
+    applyVorticityForceShader.render(*flowVelocitiesFboPtr, vorticityRenderer.getFbo(), vorticityStrength, dt);
     applyVelocityBoundariesIfNeeded();
+    applyVelocityCflClamp(dt);
 
     // compute
     divergenceRenderer.render(flowVelocitiesFboPtr->getSource());
     pressuresFbo.getSource().begin();
     pressuresFbo.getSource().clearColorBuffer(ofFloatColor(0.0, 0.0, 0.0, 0.0));
     pressuresFbo.getSource().end();
-    pressureJacobiShader.render(pressuresFbo, divergenceRenderer.getFbo().getTexture(), dt, -1.0, 0.25, pressureDiffusionIterationsParameter.get()); // alpha should be -cellSize * cellSize
+    const float gridSize = std::min(flowVelocitiesFboPtr->getWidth(), flowVelocitiesFboPtr->getHeight());
+    const float dx = 1.0f / std::max(1.0f, gridSize);
+    const float pressureAlpha = -(dx * dx);
+
+    pressureJacobiShader.render(pressuresFbo,
+                                divergenceRenderer.getFbo().getTexture(),
+                                dt,
+                                pressureAlpha,
+                                0.25,
+                                pressureDiffusionIterationsParameter.get());
     subtractDivergenceShader.render(*flowVelocitiesFboPtr, pressuresFbo.getSource());
     applyVelocityBoundariesIfNeeded();
   }
@@ -229,11 +247,14 @@ public:
 
     // Apply a radial velocity impulse directly via the shader,
     // which reads the previous velocity field and writes an updated one.
+    const float frameDt = static_cast<float>(ofGetLastFrameTime());
+    const float dt = dtParameter.get() * frameDt;
+
     addRadialImpulseShader.render(*flowVelocitiesFboPtr,
                                   impulse.position,
                                   impulse.radius,
                                   impulse.radialVelocity,
-                                  dtParameter.get());
+                                  dt);
 //    ofFloatColor velocityValue { impulse.velocity.r, impulse.velocity.g, 0.0, 1.0 };
 //    softCircleShader.render(impulse.position, impulse.radius, velocityValue);
     
@@ -298,6 +319,20 @@ public:
   void applyVelocityBoundariesIfNeeded() {
     if (boundaryModeParameter.get() != 0) return; // SolidWalls only for now
     velocityBoundaryShader.render(*flowVelocitiesFboPtr);
+  }
+
+  void applyVelocityCflClamp(float dt) {
+    if (dt <= 0.0f) return;
+    if (!flowVelocitiesFboPtr) return;
+
+    const float gridSize = std::min(flowVelocitiesFboPtr->getWidth(), flowVelocitiesFboPtr->getHeight());
+    const float dx = 1.0f / std::max(1.0f, gridSize);
+
+    // Allow at most N cells displacement per step.
+    constexpr float CFL_CELLS = 4.0f;
+    const float maxDisp = CFL_CELLS * dx;
+
+    velocityCflClampShader.render(*flowVelocitiesFboPtr, dt, maxDisp);
   }
 
   bool validateExternalBuffers() {
@@ -375,8 +410,11 @@ public:
   // 0: SolidWalls, 1: Wrap, 2: Open
   ofParameter<int> boundaryModeParameter { "Boundary Mode", 0, 0, 2 };
 
-  ofParameter<float> dtParameter { "dt", 0.0025, 0.001, 0.005 };
-  ofParameter<float> vorticityParameter { "Vorticity", 50.0, 0.00, 100.0 };
+  // Interpreted as a dimensionless simulation speed.
+  // Effective dt used in the solver is: dtEffective = ofGetLastFrameTime() * dt.
+  ofParameter<float> dtParameter { "dt", 0.1f, 0.0f, 1.0f };
+  // Normalized artist control. Internally mapped to a vorticity confinement strength.
+  ofParameter<float> vorticityParameter { "Vorticity", 0.25f, 0.0f, 1.0f };
   
   ofParameter<float> valueAdvectDissipationParameter = AdvectShader::createDissipationParameter("Value ", 0.999);
   ofParameter<float> velocityAdvectDissipationParameter = AdvectShader::createDissipationParameter("Velocity ", 0.999);
@@ -414,6 +452,7 @@ public:
   VorticityRenderer vorticityRenderer;
   ApplyVorticityForceShader applyVorticityForceShader;
   VelocityBoundaryShader velocityBoundaryShader;
+  VelocityCflClampShader velocityCflClampShader;
 //  ApplyBouyancyShader applyBouyancyShader;
   
   SoftCircleShader softCircleShader;
