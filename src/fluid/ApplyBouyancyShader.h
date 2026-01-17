@@ -1,80 +1,86 @@
 #pragma once
 
 #include "Shader.h"
+#include "ofGraphics.h"
 
 class ApplyBouyancyShader : public Shader {
 
 public:
-  void render(PingPongFbo& velocities, PingPongFbo& temperatures, PingPongFbo& values, float dt, float ambientTemperature, float smokeBouyancy, float smokeWeight, float gravityForceX, float gravityForceY) {
+  void render(PingPongFbo& velocities,
+              const PingPongFbo& values,
+              float dt,
+              float buoyancyStrength,
+              float densityScale,
+              float densityThreshold,
+              float gravityForceX,
+              float gravityForceY) {
+    if (buoyancyStrength == 0.0f) return;
+
     ofPushStyle();
     ofEnableBlendMode(OF_BLENDMODE_DISABLED);
-    shader.begin();
-    shader.setUniform1f("dt", dt);
-    shader.setUniform1f("ambientTemperature", ambientTemperature);
-    shader.setUniform1f("smokeBouyancy", smokeBouyancy);
-    shader.setUniform1f("smokeWeight", smokeWeight);
-    shader.setUniform1f("gravityForceX", gravityForceX);
-    shader.setUniform1f("gravityForceY", gravityForceY);
-    shader.setUniformTexture("temperatures", temperatures.getSource(), 1);
-    shader.setUniformTexture("values", values.getSource(), 2);
+
     velocities.getTarget().begin();
-    velocities.getSource().draw(0, 0);
+    {
+      shader.begin();
+      shader.setUniform1f("dt", dt);
+      shader.setUniform1f("buoyancyStrength", buoyancyStrength);
+      shader.setUniform1f("densityScale", densityScale);
+      shader.setUniform1f("densityThreshold", densityThreshold);
+      shader.setUniform2f("gravityForce", gravityForceX, gravityForceY);
+      shader.setUniformTexture("values", values.getSource().getTexture(), 1);
+      velocities.getSource().draw(0, 0);
+      shader.end();
+    }
     velocities.getTarget().end();
     velocities.swap();
-    shader.end();
+
     ofPopStyle();
   }
-  
-  static ofParameter<float> createAmbientTemperatureParameter(float value=0.0) {
-    return ofParameter<float> { "ambientTemperature", value, 0.0, 100.0 };
+
+  static ofParameter<float> createBuoyancyStrengthParameter(float value = 0.0f) {
+    return ofParameter<float> { "Buoyancy Strength", value, 0.0f, 3.0f };
   }
 
-  static ofParameter<float> createSmokeBouyancyParameter(float value=1.0) {
-    return ofParameter<float> { "smokeBouyancy", value, 0.0, 10.0 };
+  static ofParameter<float> createDensityScaleParameter(float value = 1.0f) {
+    return ofParameter<float> { "Buoyancy Density Scale", value, 0.0f, 10.0f };
   }
 
-  static ofParameter<float> createSmokeWeightParameter(float value=0.05) {
-    return ofParameter<float> { "smokeWeight", value, 0.0, 1.0 };
+  static ofParameter<float> createDensityThresholdParameter(float value = 0.0f) {
+    return ofParameter<float> { "Buoyancy Threshold", value, 0.0f, 1.0f };
   }
 
-  static ofParameter<float> createGravityForceXParameter(float value=0.0) {
-    return ofParameter<float> { "gravityForceX", value, -5.0, 5.0 };
+  static ofParameter<float> createGravityForceXParameter(float value = 0.0f) {
+    return ofParameter<float> { "Gravity Force X", value, -5.0f, 5.0f };
   }
 
-  static ofParameter<float> createGravityForceYParameter(float value=-0.98) {
-    return ofParameter<float> { "gravityForceY", value, -5.0, 5.0 };
+  static ofParameter<float> createGravityForceYParameter(float value = -1.0f) {
+    return ofParameter<float> { "Gravity Force Y", value, -5.0f, 5.0f };
   }
 
 protected:
   std::string getFragmentShader() override {
     return GLSL(
-                uniform sampler2D tex0; // velocities
-                uniform sampler2D temperatures;
-                uniform sampler2D values; // current values (density)
-                uniform float ambientTemperature;
-                uniform float smokeBouyancy;
-                uniform float smokeWeight;
-                uniform float gravityForceX;
-                uniform float gravityForceY;
-                uniform float dt;
+                 uniform sampler2D tex0; // velocities
+                 uniform sampler2D values;
+                 uniform float dt;
+                 uniform float buoyancyStrength;
+                 uniform float densityScale;
+                 uniform float densityThreshold;
+                 uniform vec2 gravityForce;
+                 in vec2 texCoordVarying;
+                 out vec4 fragColor;
 
-                void main() {
-                  vec2 xy = gl_TexCoord[0].st;
+                 void main() {
+                   vec2 uv = texCoordVarying.xy;
+                   vec2 velocity = texture(tex0, uv).xy;
 
-                  float temperature = texture2D(temperatures, xy).r;
-                  vec2 velocity = texture2D(tex0, xy).xy;
-                  
-                  gl_FragColor.xy = velocity;
-                  
-                  if (temperature > ambientTemperature) {
-                    gl_FragColor.xy += 10.0;
+                   vec4 v = texture(values, uv);
+                   float density = max(v.a, dot(v.rgb, vec3(0.333333)));
+                   density = max(0.0, densityScale * (density - densityThreshold));
 
-//                    vec4 value = texture2D(values, xy);
-//                    float density = value.a;
-////                    float density = (value.r + value.g + value.b) * value.a / 3.0;
-//                    gl_FragColor.xy += (dt * (temperature - ambientTemperature) * smokeBouyancy - density * smokeWeight) * vec2(gravityForceX, gravityForceY);
-                  }
-                }
-                );
+                   vec2 vNew = velocity + dt * buoyancyStrength * density * gravityForce;
+                   fragColor = vec4(vNew, 0.0, 0.0);
+                 }
+    );
   }
 };

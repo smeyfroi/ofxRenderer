@@ -20,7 +20,7 @@
 #include "ApplyVorticityForceShader.h"
 #include "VelocityBoundaryShader.h"
 #include "VelocityCflClampShader.h"
-//#include "ApplyBouyancyShader.h"
+#include "ApplyBouyancyShader.h"
 #include "AddRadialImpulseShader.h"
 #include "SoftCircleShader.h"
 
@@ -152,12 +152,9 @@ public:
     allocateDiffusionSourceIfNeeded(velocityDiffusionSourceFbo, flowVelocitiesSize.x, flowVelocitiesSize.y, getExpectedWrapMode());
     allocateDiffusionSourceIfNeeded(valueDiffusionSourceFbo, flowValuesSize.x, flowValuesSize.y, getExpectedWrapMode());
 
-//    temperaturesFbo.allocate(flowValuesSize.x, flowValuesSize.y, GL_RGB32F);
-//    temperaturesFbo.getSource().begin();
-//    ofClear(ofFloatColor(ambientTemperatureParameter));
-//    temperaturesFbo.getSource().end();
-//    applyBouyancyShader.load();
-    
+    applyBouyancyShader.load();
+
+
     addRadialImpulseShader.load();
     softCircleShader.load();
 
@@ -182,12 +179,12 @@ public:
       parameters.add(valueDiffusionIterationsParameter);
       parameters.add(velocityDiffusionIterationsParameter);
       parameters.add(pressureDiffusionIterationsParameter);
-//      applyBouyancyParameters.add(ambientTemperatureParameter);
-//      applyBouyancyParameters.add(smokeBouyancyParameter);
-//      applyBouyancyParameters.add(smokeWeightParameter);
-//      applyBouyancyParameters.add(gravityForceXParameter);
-//      applyBouyancyParameters.add(gravityForceYParameter);
-//      parameters.add(applyBouyancyParameters);
+      buoyancyParameters.add(buoyancyStrengthParameter);
+      buoyancyParameters.add(buoyancyDensityScaleParameter);
+      buoyancyParameters.add(buoyancyThresholdParameter);
+      buoyancyParameters.add(gravityForceXParameter);
+      buoyancyParameters.add(gravityForceYParameter);
+      parameters.add(buoyancyParameters);
     }
     return parameters;
   }
@@ -271,6 +268,19 @@ public:
     applyVelocityBoundariesIfNeeded();
     applyVelocityCflClamp(dt);
 
+    if (buoyancyStrengthParameter.get() > 0.0f) {
+      applyBouyancyShader.render(*flowVelocitiesFboPtr,
+                                *flowValuesFboPtr,
+                                dt,
+                                buoyancyStrengthParameter.get(),
+                                buoyancyDensityScaleParameter.get(),
+                                buoyancyThresholdParameter.get(),
+                                gravityForceXParameter.get(),
+                                gravityForceYParameter.get());
+      applyVelocityBoundariesIfNeeded();
+      applyVelocityCflClamp(dt);
+    }
+ 
     // compute
     divergenceRenderer.render(flowVelocitiesFboPtr->getSource());
     clearPressureIfNeeded();
@@ -637,12 +647,12 @@ public:
   ofParameter<int> valueDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Value ", 1);
   ofParameter<int> velocityDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Velocity ", 1);
   ofParameter<int> pressureDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Pressure ", 10);
-//  ofParameterGroup applyBouyancyParameters { "Bouyancy" };
-//  ofParameter<float> ambientTemperatureParameter = ApplyBouyancyShader::createAmbientTemperatureParameter();
-//  ofParameter<float> smokeBouyancyParameter = ApplyBouyancyShader::createSmokeBouyancyParameter();
-//  ofParameter<float> smokeWeightParameter = ApplyBouyancyShader::createSmokeWeightParameter();
-//  ofParameter<float> gravityForceXParameter = ApplyBouyancyShader::createGravityForceXParameter();
-//  ofParameter<float> gravityForceYParameter = ApplyBouyancyShader::createGravityForceYParameter();
+  ofParameterGroup buoyancyParameters { "Buoyancy" };
+  ofParameter<float> buoyancyStrengthParameter = ApplyBouyancyShader::createBuoyancyStrengthParameter();
+  ofParameter<float> buoyancyDensityScaleParameter = ApplyBouyancyShader::createDensityScaleParameter();
+  ofParameter<float> buoyancyThresholdParameter = ApplyBouyancyShader::createDensityThresholdParameter();
+  ofParameter<float> gravityForceXParameter = ApplyBouyancyShader::createGravityForceXParameter();
+  ofParameter<float> gravityForceYParameter = ApplyBouyancyShader::createGravityForceYParameter();
   
 
   bool valid = false;
@@ -672,7 +682,7 @@ public:
   VelocityCflClampShader velocityCflClampShader;
   ofFbo velocityDiffusionSourceFbo;
   ofFbo valueDiffusionSourceFbo;
-//  ApplyBouyancyShader applyBouyancyShader;
+  ApplyBouyancyShader applyBouyancyShader;
   
   SoftCircleShader softCircleShader;
   AddRadialImpulseShader addRadialImpulseShader;

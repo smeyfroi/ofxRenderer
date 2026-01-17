@@ -58,6 +58,7 @@ void ofApp::setup() {
   parameters.add(fluidSimulation.getParameterGroup());
 
   gui.setup(parameters);
+  gui.setPosition(ofGetWidth() - gui.getWidth() - 10.0f, 10.0f);
 
   reloadShaders();
 }
@@ -167,6 +168,14 @@ void ofApp::draw() {
        << " vel=" << ofToString(step.velocitySpreadCoeff, 8) << "\n";
     ss << "Vorticity strength: " << ofToString(step.vorticityStrength, 4) << "\n";
 
+    auto& simParams = fluidSimulation.getParameterGroup();
+    auto& buoyancyParams = simParams.getGroup("Buoyancy");
+    ss << "Buoyancy: strength=" << ofToString(buoyancyParams.getFloat("Buoyancy Strength"), 3)
+       << " densityScale=" << ofToString(buoyancyParams.getFloat("Buoyancy Density Scale"), 3)
+       << " threshold=" << ofToString(buoyancyParams.getFloat("Buoyancy Threshold"), 3)
+       << " gravity=(" << ofToString(buoyancyParams.getFloat("Gravity Force X"), 3)
+       << "," << ofToString(buoyancyParams.getFloat("Gravity Force Y"), 3) << ")\n";
+ 
     ss << "Keys: [g] GUI  [i] info  [r] reload shaders\n";
     ss << "Draw: [1] values  [2] velXY  [3] velMag  [4] div  [5] pressure  [6] curl";
 
