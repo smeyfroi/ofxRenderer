@@ -6,6 +6,8 @@
 #include <string>
 
 #include "ofAppRunner.h" // ofGetLastFrameTime()
+#include "ofFbo.h"
+#include "ofGraphics.h"
 #include "ofLog.h"
 #include "ofTexture.h"
 #include "ofxGui.h"
@@ -46,7 +48,11 @@ public:
     glm::vec2 position;
     float radius;
     glm::vec2 velocity;
-    float radialVelocity; // applies if velocity == nullptr. FIXME: this isn't a ptr!
+
+    // These are in pixels-per-step (relative to the velocity field).
+    float radialVelocity = 0.0f;
+    float swirlVelocity = 0.0f;
+
     ofFloatColor color;
     float colorDensity; // resultant color is `color * colorDensity`
 //    float temperature;
@@ -70,6 +76,20 @@ public:
   bool isSetup() const { return flowValuesFboPtr && flowVelocitiesFboPtr; }
   bool isValid() const { return isSetup() && valid; }
   const std::string& getValidationError() const { return validationError; }
+
+  struct DebugStepInfo {
+    float rawFrameDt = 0.0f;
+    float frameDt = 0.0f;
+    float dtEffective = 0.0f;
+    float dx = 0.0f;
+    float velocityDissipation = 1.0f;
+    float valueDissipation = 1.0f;
+    float velocitySpreadCoeff = 0.0f;
+    float valueSpreadCoeff = 0.0f;
+    float vorticityStrength = 0.0f;
+  };
+
+  const DebugStepInfo& getDebugStepInfo() const { return debugStepInfo; }
 
   void setup(glm::vec2 flowValuesSize) {
     ownsFlowBuffers = true;
@@ -125,6 +145,9 @@ public:
     velocityBoundaryShader.load();
     velocityCflClampShader.load();
 
+    allocateDiffusionSourceIfNeeded(velocityDiffusionSourceFbo, flowVelocitiesSize.x, flowVelocitiesSize.y, getExpectedWrapMode());
+    allocateDiffusionSourceIfNeeded(valueDiffusionSourceFbo, flowValuesSize.x, flowValuesSize.y, getExpectedWrapMode());
+
 //    temperaturesFbo.allocate(flowValuesSize.x, flowValuesSize.y, GL_RGB32F);
 //    temperaturesFbo.getSource().begin();
 //    ofClear(ofFloatColor(ambientTemperatureParameter));
@@ -147,6 +170,9 @@ public:
       parameters.add(vorticityParameter);
       parameters.add(valueAdvectDissipationParameter);
       parameters.add(velocityAdvectDissipationParameter);
+      parameters.add(valueSpreadParameter);
+      parameters.add(velocitySpreadParameter);
+      parameters.add(valueMaxParameter);
 //      parameters.add(temperatureAdvectDissipationParameter);
       parameters.add(valueDiffusionIterationsParameter);
       parameters.add(velocityDiffusionIterationsParameter);
@@ -172,28 +198,70 @@ public:
 
     if (!isValid()) return;
  
-    const float frameDt = static_cast<float>(ofGetLastFrameTime());
-    const float dt = dtParameter.get() * frameDt;
- 
+    const float rawFrameDt = static_cast<float>(ofGetLastFrameTime());
+    const float frameDt = clampFrameDt(rawFrameDt);
+
+    // dtParameter is tuned relative to a baseline framerate (historically 30fps).
+    // At 30fps, dtEffective ~= dtParameter.
+    constexpr float BASE_FPS = 30.0f;
+    const float dt = dtParameter.get() * frameDt * BASE_FPS;
+
+    debugStepInfo.rawFrameDt = rawFrameDt;
+    debugStepInfo.frameDt = frameDt;
+    debugStepInfo.dtEffective = dt;
+
+    const float gridSize = std::min(flowVelocitiesFboPtr->getWidth(), flowVelocitiesFboPtr->getHeight());
+    const float dx = 1.0f / std::max(1.0f, gridSize);
+    debugStepInfo.dx = dx;
+
+    const float velocityDissipation = persistenceToDissipation(velocityAdvectDissipationParameter.get(), frameDt, 0.05f, 6.0f);
+    const float valueDissipation = persistenceToDissipation(valueAdvectDissipationParameter.get(), frameDt, 0.2f, 30.0f);
+    debugStepInfo.velocityDissipation = velocityDissipation;
+    debugStepInfo.valueDissipation = valueDissipation;
+
     // advect
-    velocityAdvectShader.render(*flowVelocitiesFboPtr, flowVelocitiesFboPtr->getSource().getTexture(), dt, velocityAdvectDissipationParameter.get());
+    velocityAdvectShader.render(*flowVelocitiesFboPtr,
+                                flowVelocitiesFboPtr->getSource().getTexture(),
+                                dt,
+                                velocityDissipation,
+                                0.0f);
     applyVelocityBoundariesIfNeeded();
 
-//    temperaturesAdvectShader.render(temperaturesFbo, flowVelocitiesFbo.getSource().getTexture(), dtParameter, temperatureAdvectDissipationParameter);
-    valueAdvectShader.render(*flowValuesFboPtr, flowVelocitiesFboPtr->getSource().getTexture(), dt, valueAdvectDissipationParameter.get());
+    valueAdvectShader.render(*flowValuesFboPtr,
+                             flowVelocitiesFboPtr->getSource().getTexture(),
+                             dt,
+                             valueDissipation,
+                             valueMaxParameter.get());
 
-//    applyBouyancyShader.render(flowVelocitiesFbo, temperaturesFbo, flowValuesFbo, dtParameter, ambientTemperatureParameter, smokeBouyancyParameter, smokeWeightParameter, gravityForceXParameter, gravityForceYParameter);
-
-    // diffuse
-    velocityJacobiShader.render(*flowVelocitiesFboPtr, flowVelocitiesFboPtr->getSource().getTexture(), dt, 1.0E-3, 0.25, velocityDiffusionIterationsParameter.get());
+    // diffuse (dt/dx-correct)
+    debugStepInfo.velocitySpreadCoeff = applyDiffusionIfEnabled(*flowVelocitiesFboPtr,
+                                                               velocityJacobiShader,
+                                                               velocityDiffusionSourceFbo,
+                                                               velocitySpreadParameter.get(),
+                                                               dt,
+                                                               dx,
+                                                               velocityDiffusionIterationsParameter.get(),
+                                                               1.0e-7f,
+                                                               5.0e-4f);
     applyVelocityBoundariesIfNeeded();
 
-    valueJacobiShader.render(*flowValuesFboPtr, flowValuesFboPtr->getSource().getTexture(), dt, -1.0E-10, 0.25, valueDiffusionIterationsParameter.get());
+    debugStepInfo.valueSpreadCoeff = applyDiffusionIfEnabled(*flowValuesFboPtr,
+                                                            valueJacobiShader,
+                                                            valueDiffusionSourceFbo,
+                                                            valueSpreadParameter.get(),
+                                                            dt,
+                                                            dx,
+                                                            valueDiffusionIterationsParameter.get(),
+                                                            1.0e-8f,
+                                                            5.0e-4f);
 
     // add forces
     vorticityRenderer.render(flowVelocitiesFboPtr->getSource());
-    constexpr float VORTICITY_MAX = 50.0f;
-    const float vorticityStrength = vorticityParameter.get() * VORTICITY_MAX;
+
+    // Normalized 0..1 control mapped to the empirically useful range.
+    constexpr float VORTICITY_MAX = 0.3f;
+    const float vorticityStrength = std::clamp(vorticityParameter.get(), 0.0f, 1.0f) * VORTICITY_MAX;
+    debugStepInfo.vorticityStrength = vorticityStrength;
 
     applyVorticityForceShader.render(*flowVelocitiesFboPtr, vorticityRenderer.getFbo(), vorticityStrength, dt);
     applyVelocityBoundariesIfNeeded();
@@ -204,23 +272,22 @@ public:
     pressuresFbo.getSource().begin();
     pressuresFbo.getSource().clearColorBuffer(ofFloatColor(0.0, 0.0, 0.0, 0.0));
     pressuresFbo.getSource().end();
-    const float gridSize = std::min(flowVelocitiesFboPtr->getWidth(), flowVelocitiesFboPtr->getHeight());
-    const float dx = 1.0f / std::max(1.0f, gridSize);
-    const float pressureAlpha = -(dx * dx);
 
+    const float pressureAlpha = -(dx * dx);
     pressureJacobiShader.render(pressuresFbo,
                                 divergenceRenderer.getFbo().getTexture(),
                                 dt,
                                 pressureAlpha,
                                 0.25,
                                 pressureDiffusionIterationsParameter.get());
+
     subtractDivergenceShader.render(*flowVelocitiesFboPtr, pressuresFbo.getSource());
     applyVelocityBoundariesIfNeeded();
   }
   
   void draw(float x, float y, float w, float h) {
     if (!isValid()) return;
-    ofBlendMode(OF_BLENDMODE_ALPHA);
+    ofEnableBlendMode(OF_BLENDMODE_ALPHA);
     ofSetFloatColor(1.0, 1.0, 1.0, 1.0);
     flowValuesFboPtr->draw(x, y, w, h);
 //    flowVelocitiesFboPtr->draw(x, y, w, h);
@@ -245,15 +312,16 @@ public:
     ofPopStyle();
     flowValuesFboPtr->getSource().end();
 
-    // Apply a radial velocity impulse directly via the shader,
-    // which reads the previous velocity field and writes an updated one.
-    const float frameDt = static_cast<float>(ofGetLastFrameTime());
-    const float dt = dtParameter.get() * frameDt;
+    const float rawFrameDt = static_cast<float>(ofGetLastFrameTime());
+    const float frameDt = clampFrameDt(rawFrameDt);
+    constexpr float BASE_FPS = 30.0f;
+    const float dt = dtParameter.get() * frameDt * BASE_FPS;
 
     addRadialImpulseShader.render(*flowVelocitiesFboPtr,
                                   impulse.position,
                                   impulse.radius,
                                   impulse.radialVelocity,
+                                  impulse.swirlVelocity,
                                   dt);
 //    ofFloatColor velocityValue { impulse.velocity.r, impulse.velocity.g, 0.0, 1.0 };
 //    softCircleShader.render(impulse.position, impulse.radius, velocityValue);
@@ -303,6 +371,8 @@ public:
     setFboWrap(pressuresFbo.getTarget(), wrap);
     setFboWrap(divergenceRenderer.getFbo(), wrap);
     setFboWrap(vorticityRenderer.getFbo(), wrap);
+    setFboWrap(velocityDiffusionSourceFbo, wrap);
+    setFboWrap(valueDiffusionSourceFbo, wrap);
   }
 
   void applyExpectedWrapModeToFlowBuffersIfOwned() {
@@ -314,6 +384,111 @@ public:
     setFboWrap(flowValuesFboPtr->getTarget(), wrap);
     setFboWrap(flowVelocitiesFboPtr->getSource(), wrap);
     setFboWrap(flowVelocitiesFboPtr->getTarget(), wrap);
+  }
+
+  static void allocateDiffusionSourceIfNeeded(ofFbo& fbo, int width, int height, GLint wrap) {
+    if (width <= 0 || height <= 0) return;
+
+    if (fbo.isAllocated() && static_cast<int>(fbo.getWidth()) == width && static_cast<int>(fbo.getHeight()) == height) {
+      return;
+    }
+
+    ofFboSettings settings;
+    settings.width = width;
+    settings.height = height;
+    settings.internalformat = GL_RGBA32F;
+    settings.useDepth = false;
+    settings.useStencil = false;
+    settings.textureTarget = GL_TEXTURE_2D;
+    settings.wrapModeHorizontal = wrap;
+    settings.wrapModeVertical = wrap;
+
+    fbo.allocate(settings);
+
+    fbo.begin();
+    ofClear(0, 0, 0, 0);
+    fbo.end();
+  }
+
+  static void copyToFbo(const ofFbo& src, ofFbo& dst) {
+    if (!dst.isAllocated()) return;
+
+    ofPushStyle();
+    ofEnableBlendMode(OF_BLENDMODE_DISABLED);
+
+    dst.begin();
+    ofClear(0, 0, 0, 0);
+    src.draw(0, 0, dst.getWidth(), dst.getHeight());
+    dst.end();
+
+    ofPopStyle();
+  }
+
+  static float clampFrameDt(float frameDt) {
+    constexpr float MIN_DT = 1.0f / 240.0f;
+    constexpr float MAX_DT = 1.0f / 15.0f;
+    if (!std::isfinite(frameDt)) return MIN_DT;
+    return std::clamp(frameDt, MIN_DT, MAX_DT);
+  }
+
+  static float persistenceToDissipation(float persistence, float frameDt, float minHalfLife, float maxHalfLife) {
+    const float p = std::clamp(persistence, 0.0f, 1.0f);
+    const float minHL = std::max(1.0e-3f, minHalfLife);
+    const float maxHL = std::max(minHL, maxHalfLife);
+
+    const float logMin = std::log(minHL);
+    const float logMax = std::log(maxHL);
+    const float halfLife = std::exp(logMin + (logMax - logMin) * p);
+
+    if (frameDt <= 0.0f) return 1.0f;
+
+    return std::exp(std::log(0.5f) * (frameDt / halfLife));
+  }
+
+  static float spreadToCoefficient(float spread, float minCoeff, float maxCoeff) {
+    const float s0 = std::clamp(spread, 0.0f, 1.0f);
+    if (s0 <= 0.0f) return 0.0f;
+
+    // Make mid-range values noticeably effective without requiring the top 5% of the knob.
+    const float s = std::sqrt(s0);
+
+    const float logMin = std::log(minCoeff);
+    const float logMax = std::log(maxCoeff);
+    return std::exp(logMin + (logMax - logMin) * s);
+  }
+
+  static bool diffusionToJacobiParams(float coeff, float dt, float dx, float& alpha, float& rBeta) {
+    if (coeff <= 0.0f || dt <= 0.0f || dx <= 0.0f) return false;
+
+    const float invDx2 = 1.0f / (dx * dx);
+    const float a = dt * coeff * invDx2;
+    if (a <= 1.0e-9f) return false;
+
+    // For diffusion: x_new = (sum(neighbors) + a * x0) / (4 + a)
+    alpha = a;
+    rBeta = 1.0f / (4.0f + a);
+    return true;
+  }
+
+  static float applyDiffusionIfEnabled(PingPongFbo& field,
+                                       JacobiShader& solver,
+                                       ofFbo& diffusionSource,
+                                       float spread,
+                                       float dt,
+                                       float dx,
+                                       int iterations,
+                                       float minCoeff,
+                                       float maxCoeff) {
+    if (iterations <= 0) return 0.0f;
+
+    const float coeff = spreadToCoefficient(spread, minCoeff, maxCoeff);
+    float alpha = 0.0f;
+    float rBeta = 0.0f;
+    if (!diffusionToJacobiParams(coeff, dt, dx, alpha, rBeta)) return 0.0f;
+
+    copyToFbo(field.getSource(), diffusionSource);
+    solver.render(field, diffusionSource.getTexture(), dt, alpha, rBeta, iterations);
+    return coeff;
   }
 
   void applyVelocityBoundariesIfNeeded() {
@@ -410,18 +585,31 @@ public:
   // 0: SolidWalls, 1: Wrap, 2: Open
   ofParameter<int> boundaryModeParameter { "Boundary Mode", 0, 0, 2 };
 
-  // Interpreted as a dimensionless simulation speed.
-  // Effective dt used in the solver is: dtEffective = ofGetLastFrameTime() * dt.
-  ofParameter<float> dtParameter { "dt", 0.1f, 0.0f, 1.0f };
+  // Interpreted as a dimensionless simulation speed tuned around a baseline framerate.
+  // Effective dt used in the solver is: dtEffective = ofGetLastFrameTime() * BASE_FPS * dt.
+  // With BASE_FPS=30, dtEffective ~= dt at 30fps.
+  ofParameter<float> dtParameter { "dt", 0.03f, 0.0f, 0.3f };
+
   // Normalized artist control. Internally mapped to a vorticity confinement strength.
-  ofParameter<float> vorticityParameter { "Vorticity", 0.25f, 0.0f, 1.0f };
-  
-  ofParameter<float> valueAdvectDissipationParameter = AdvectShader::createDissipationParameter("Value ", 0.999);
-  ofParameter<float> velocityAdvectDissipationParameter = AdvectShader::createDissipationParameter("Velocity ", 0.999);
+  ofParameter<float> vorticityParameter { "Vorticity", 0.15f, 0.0f, 1.0f };
+
+  // NOTE: These are normalized persistence controls (0..1), not per-frame multipliers.
+  // We'll rename these keys during bulk config migration.
+  ofParameter<float> valueAdvectDissipationParameter { "Value Dissipation", 0.92f, 0.0f, 1.0f };
+  ofParameter<float> velocityAdvectDissipationParameter { "Velocity Dissipation", 0.4f, 0.0f, 1.0f };
+
+  // Normalized diffusion/viscosity controls.
+  ofParameter<float> valueSpreadParameter { "Value Spread", 0.2f, 0.0f, 1.0f };
+  ofParameter<float> velocitySpreadParameter { "Velocity Spread", 0.7f, 0.0f, 1.0f };
+
+  // Clamp values after advection to prevent unbounded dye accumulation.
+  // Set to 0 to disable.
+  ofParameter<float> valueMaxParameter { "Value Max", 1.0f, 0.0f, 10.0f };
+
 //  ofParameter<float> temperatureAdvectDissipationParameter = AdvectShader::createDissipationParameter("temperature:");
-  ofParameter<int> valueDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Value ", 1);
-  ofParameter<int> velocityDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Velocity ", 1);
-  ofParameter<int> pressureDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Pressure ", 25);
+  ofParameter<int> valueDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Value ", 18);
+  ofParameter<int> velocityDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Velocity ", 18);
+  ofParameter<int> pressureDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Pressure ", 40);
 //  ofParameterGroup applyBouyancyParameters { "Bouyancy" };
 //  ofParameter<float> ambientTemperatureParameter = ApplyBouyancyShader::createAmbientTemperatureParameter();
 //  ofParameter<float> smokeBouyancyParameter = ApplyBouyancyShader::createSmokeBouyancyParameter();
@@ -453,8 +641,12 @@ public:
   ApplyVorticityForceShader applyVorticityForceShader;
   VelocityBoundaryShader velocityBoundaryShader;
   VelocityCflClampShader velocityCflClampShader;
+  ofFbo velocityDiffusionSourceFbo;
+  ofFbo valueDiffusionSourceFbo;
 //  ApplyBouyancyShader applyBouyancyShader;
   
   SoftCircleShader softCircleShader;
   AddRadialImpulseShader addRadialImpulseShader;
+
+  DebugStepInfo debugStepInfo;
 };

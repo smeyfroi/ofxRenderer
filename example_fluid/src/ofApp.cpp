@@ -37,10 +37,15 @@ void ofApp::setup() {
   debugParameters.add(showGuiParameter);
   debugParameters.add(showInfoOverlayParameter);
   debugParameters.add(mouseImpulseParameter);
+  debugParameters.add(mouseImpulseRadiusPxParameter);
+  debugParameters.add(mouseImpulseRadialVelocityParameter);
+  debugParameters.add(mouseImpulseSwirlVelocityParameter);
+  debugParameters.add(mouseImpulseAlphaParameter);
   debugParameters.add(autoImpulseParameter);
   debugParameters.add(autoImpulsePerSecondParameter);
   debugParameters.add(autoImpulseRadiusPxParameter);
   debugParameters.add(autoImpulseRadialVelocityParameter);
+  debugParameters.add(autoImpulseSwirlVelocityParameter);
   debugParameters.add(autoImpulseColorAlphaParameter);
   debugParameters.add(constantDriftParameter);
   debugParameters.add(driftVelocityParameter);
@@ -74,6 +79,7 @@ void ofApp::update() {
         autoImpulseRadiusPxParameter.get() * SCALE,
         glm::vec2 { 0.0f, 0.0f },
         autoImpulseRadialVelocityParameter.get() * SCALE,
+        autoImpulseSwirlVelocityParameter.get() * SCALE,
         ofFloatColor(0.2f + ofRandom(0.4f), 0.05f + ofRandom(0.3f), 0.1f + ofRandom(0.3f), autoImpulseColorAlphaParameter.get()),
         1.0f,
       };
@@ -84,10 +90,11 @@ void ofApp::update() {
   if (mouseImpulseParameter && ofGetMousePressed()) {
     FluidSimulation::Impulse impulse {
       { ofGetMouseX() * SCALE, ofGetMouseY() * SCALE },
-      autoImpulseRadiusPxParameter.get() * SCALE,
+      mouseImpulseRadiusPxParameter.get() * SCALE,
       glm::vec2 { (ofGetMouseX() - ofGetPreviousMouseX()) * 0.001f, (ofGetMouseY() - ofGetPreviousMouseY()) * 0.001f } * SCALE,
-      autoImpulseRadialVelocityParameter.get() * SCALE,
-      ofFloatColor(0.2f + ofRandom(0.4f), 0.05f + ofRandom(0.3f), 0.1f + ofRandom(0.3f), autoImpulseColorAlphaParameter.get()),
+      mouseImpulseRadialVelocityParameter.get() * SCALE,
+      mouseImpulseSwirlVelocityParameter.get() * SCALE,
+      ofFloatColor(0.2f + ofRandom(0.4f), 0.05f + ofRandom(0.3f), 0.1f + ofRandom(0.3f), mouseImpulseAlphaParameter.get()),
       1.0f,
     };
     fluidSimulation.applyImpulse(impulse);
@@ -144,6 +151,18 @@ void ofApp::draw() {
     ss << "Vel:    " << velTex.getWidth() << "x" << velTex.getHeight() << " format=" << glInternalFormatToString(velData.glInternalFormat)
        << " wrap=" << glWrapToString(velData.wrapModeHorizontal) << "," << glWrapToString(velData.wrapModeVertical)
        << " tex_u/t=" << ofToString(velData.tex_u, 3) << "," << ofToString(velData.tex_t, 3) << "\n";
+    const auto& step = fluidSimulation.getDebugStepInfo();
+    ss << "dtEffective: " << ofToString(step.dtEffective, 5)
+       << " (rawFrameDt=" << ofToString(step.rawFrameDt, 5)
+       << " clamped=" << ofToString(step.frameDt, 5) << ")\n";
+    ss << "dx: " << ofToString(step.dx, 6) << "\n";
+    ss << "ValueMax: " << ofToString(fluidSimulation.getParameterGroup().getFloat("Value Max"), 3) << "\n";
+    ss << "Dissipation: value=" << ofToString(step.valueDissipation, 6)
+       << " vel=" << ofToString(step.velocityDissipation, 6) << "\n";
+    ss << "Spread coeff: value=" << ofToString(step.valueSpreadCoeff, 8)
+       << " vel=" << ofToString(step.velocitySpreadCoeff, 8) << "\n";
+    ss << "Vorticity strength: " << ofToString(step.vorticityStrength, 4) << "\n";
+
     ss << "Keys: [g] GUI  [i] info  [r] reload shaders\n";
     ss << "Draw: [1] values  [2] velXY  [3] velMag  [4] div  [5] pressure  [6] curl";
 
@@ -239,8 +258,13 @@ in vec2 vTexCoord;
 out vec4 fragColor;
 void main() {
   float v = texture(tex0, vTexCoord).r;
-  v = mix(v, abs(v), clamp(u_abs, 0.0, 1.0));
-  float mapped = clamp(v * u_scale * 0.5 + 0.5, 0.0, 1.0);
+  float isAbs = clamp(u_abs, 0.0, 1.0);
+  v = mix(v, abs(v), isAbs);
+
+  float mappedSigned = clamp(v * u_scale * 0.5 + 0.5, 0.0, 1.0);
+  float mappedAbs = clamp(v * u_scale, 0.0, 1.0);
+  float mapped = mix(mappedSigned, mappedAbs, isAbs);
+
   fragColor = vec4(mapped, mapped, mapped, 1.0);
 }
 )";

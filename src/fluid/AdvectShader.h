@@ -6,7 +6,7 @@
 class AdvectShader : public Shader {
 
 public:
-  void render(PingPongFbo& values, const ofTexture& velocities, float dt, float dissipation) {
+  void render(PingPongFbo& values, const ofTexture& velocities, float dt, float dissipation, float maxValue = 0.0f) {
     ofPushStyle();
     ofEnableBlendMode(OF_BLENDMODE_DISABLED);
     values.getTarget().begin();
@@ -16,6 +16,7 @@ public:
       shader.setUniformTexture("velocities", velocities, 2);
       shader.setUniform1f("dt", dt);
       shader.setUniform1f("dissipation", dissipation);
+      shader.setUniform1f("maxValue", maxValue);
       values.getSource().draw(0, 0);
     }
     shader.end();
@@ -36,9 +37,10 @@ protected:
 //                uniform sampler2D obstacleDensities;
                 uniform float dt;
                 uniform float dissipation;
+                uniform float maxValue;
                 in vec2 texCoordVarying;
                 out vec4 fragColor;
-
+ 
                 void main() {
                   vec2 xy = texCoordVarying.xy;
 
@@ -47,6 +49,10 @@ protected:
 //                  float obstacleDensity = 1.0 - texture2D(obstacleDensities, xy).x;
 //                  gl_FragColor = obstacleDensity * dissipation * texture2D(tex0, fromXy);
                   fragColor = dissipation * texture(tex0, fromXy);
+
+                  if (maxValue > 0.0) {
+                    fragColor = clamp(fragColor, vec4(0.0), vec4(maxValue));
+                  }
 //                  fragColor = texture(tex0, xy);
                 }
                 );
