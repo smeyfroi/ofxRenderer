@@ -40,6 +40,7 @@ void ofApp::setup() {
   debugParameters.add(mouseImpulseRadiusPxParameter);
   debugParameters.add(mouseImpulseRadialVelocityParameter);
   debugParameters.add(mouseImpulseSwirlVelocityParameter);
+  debugParameters.add(mouseImpulseDragScaleParameter);
   debugParameters.add(mouseImpulseAlphaParameter);
   debugParameters.add(autoImpulseParameter);
   debugParameters.add(autoImpulsePerSecondParameter);
@@ -88,10 +89,13 @@ void ofApp::update() {
   }
 
   if (mouseImpulseParameter && ofGetMousePressed()) {
+    const glm::vec2 mouseDeltaPx { static_cast<float>(ofGetMouseX() - ofGetPreviousMouseX()),
+                                  static_cast<float>(ofGetMouseY() - ofGetPreviousMouseY()) };
+
     FluidSimulation::Impulse impulse {
       { ofGetMouseX() * SCALE, ofGetMouseY() * SCALE },
       mouseImpulseRadiusPxParameter.get() * SCALE,
-      glm::vec2 { (ofGetMouseX() - ofGetPreviousMouseX()) * 0.001f, (ofGetMouseY() - ofGetPreviousMouseY()) * 0.001f } * SCALE,
+      mouseDeltaPx * mouseImpulseDragScaleParameter.get() * SCALE,
       mouseImpulseRadialVelocityParameter.get() * SCALE,
       mouseImpulseSwirlVelocityParameter.get() * SCALE,
       ofFloatColor(0.2f + ofRandom(0.4f), 0.05f + ofRandom(0.3f), 0.1f + ofRandom(0.3f), mouseImpulseAlphaParameter.get()),

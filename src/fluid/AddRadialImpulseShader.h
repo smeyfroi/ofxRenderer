@@ -6,12 +6,14 @@
 class AddRadialImpulseShader : public Shader {
 
 public:
-  // Apply a radial + swirl velocity impulse into the velocities ping-pong FBO.
+  // Apply a velocity impulse into the velocities ping-pong FBO.
   // centerPx/radiusPx are in pixel units of the velocity field.
-  // radialVelocityPx/swirlVelocityPx are in pixels-per-step (converted internally to UV velocity).
+  // addVelocityPx is pixels of desired displacement per step (vector/drag impulse).
+  // radialVelocityPx/swirlVelocityPx are pixels of desired displacement per step (radial + tangential).
   void render(PingPongFbo& velocities,
               glm::vec2 centerPx,
               float radiusPx,
+              glm::vec2 addVelocityPx,
               float radialVelocityPx,
               float swirlVelocityPx,
               float dt) {
@@ -25,6 +27,9 @@ public:
     // The advect pass uses: fromUv = uv - dt * velocityUv
     // so to achieve a displacement of `dispUv` per step we need velocityUv = dispUv / dt.
     const float dtSafe = std::max(dt, 1.0e-6f);
+
+    // Convert from pixels of desired displacement per step to UV velocity.
+    const glm::vec2 addVelocityUv = (addVelocityPx / size) / dtSafe;
     const float radialStrengthUv = (radialVelocityPx * invMinDim) / dtSafe;
     const float swirlStrengthUv = (swirlVelocityPx * invMinDim) / dtSafe;
 
@@ -36,6 +41,7 @@ public:
     shader.setUniformTexture("tex0", velocities.getSource().getTexture(), 0);
     shader.setUniform2f("center", centerUv);
     shader.setUniform1f("radius", radiusUv);
+    shader.setUniform2f("addVelocity", addVelocityUv);
     shader.setUniform1f("radialStrength", radialStrengthUv);
     shader.setUniform1f("swirlStrength", swirlStrengthUv);
     shader.setUniform1f("dt", dt);
@@ -53,17 +59,23 @@ public:
 
   }
 
+  // Backwards-compatible overload (radial + swirl only).
+  void render(PingPongFbo& velocities, glm::vec2 centerPx, float radiusPx, float radialVelocityPx, float swirlVelocityPx, float dt) {
+    render(velocities, centerPx, radiusPx, glm::vec2(0.0f), radialVelocityPx, swirlVelocityPx, dt);
+  }
+
   // Backwards-compatible overload (radial-only).
   void render(PingPongFbo& velocities, glm::vec2 centerPx, float radiusPx, float radialVelocityPx, float dt) {
-    render(velocities, centerPx, radiusPx, radialVelocityPx, 0.0f, dt);
+    render(velocities, centerPx, radiusPx, glm::vec2(0.0f), radialVelocityPx, 0.0f, dt);
   }
 
 protected:
   std::string getFragmentShader() override {
     return GLSL(
-                uniform sampler2D tex0; // previous velocities
-                uniform vec2 center;     // UV space
+                 uniform sampler2D tex0; // previous velocities
+                 uniform vec2 center;     // UV space
                  uniform float radius;    // UV space
+                 uniform vec2 addVelocity;
                  uniform float radialStrength;
                  uniform float swirlStrength;
                  uniform float dt;
@@ -88,7 +100,7 @@ protected:
                    vec2 dir = dist > 0.0 ? normalize(d) : vec2(0.0);
                    vec2 tangent = vec2(-dir.y, dir.x);
 
-                   vec2 impulse = (dir * radialStrength + tangent * swirlStrength) * fade;
+                   vec2 impulse = (addVelocity + dir * radialStrength + tangent * swirlStrength) * fade;
 
                    vec2 vNew = oldV + impulse;
 

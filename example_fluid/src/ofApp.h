@@ -45,6 +45,7 @@ private:
   ofParameter<float> mouseImpulseRadiusPxParameter { "Mouse Radius Px", 65.0f, 1.0f, 600.0f };
   ofParameter<float> mouseImpulseRadialVelocityParameter { "Mouse Radial Vel", 3.0f, -50.0f, 50.0f };
   ofParameter<float> mouseImpulseSwirlVelocityParameter { "Mouse Swirl Vel", 2.0f, -50.0f, 50.0f };
+  ofParameter<float> mouseImpulseDragScaleParameter { "Mouse Drag Scale", 0.4f, 0.0f, 5.0f };
   ofParameter<float> mouseImpulseAlphaParameter { "Mouse Alpha", 0.1f, 0.0f, 1.0f };
 
   ofParameter<bool> autoImpulseParameter { "Auto Impulse", false };

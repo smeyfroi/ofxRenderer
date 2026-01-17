@@ -47,9 +47,10 @@ public:
   struct Impulse {
     glm::vec2 position;
     float radius;
-    glm::vec2 velocity;
+    // Pixels of desired displacement per simulation step (relative to the velocity field).
+    glm::vec2 velocity { 0.0f, 0.0f };
 
-    // These are in pixels-per-step (relative to the velocity field).
+    // Pixels of desired displacement per simulation step (relative to the velocity field).
     float radialVelocity = 0.0f;
     float swirlVelocity = 0.0f;
 
@@ -320,6 +321,7 @@ public:
     addRadialImpulseShader.render(*flowVelocitiesFboPtr,
                                   impulse.position,
                                   impulse.radius,
+                                  impulse.velocity,
                                   impulse.radialVelocity,
                                   impulse.swirlVelocity,
                                   dt);
@@ -425,9 +427,11 @@ public:
   }
 
   static float clampFrameDt(float frameDt) {
+    // Startup frames sometimes report 0 dt; use a sane baseline so forces respond immediately.
+    constexpr float STARTUP_DT = 1.0f / 30.0f;
     constexpr float MIN_DT = 1.0f / 240.0f;
     constexpr float MAX_DT = 1.0f / 15.0f;
-    if (!std::isfinite(frameDt)) return MIN_DT;
+    if (!std::isfinite(frameDt) || frameDt <= 0.0f) return STARTUP_DT;
     return std::clamp(frameDt, MIN_DT, MAX_DT);
   }
 
