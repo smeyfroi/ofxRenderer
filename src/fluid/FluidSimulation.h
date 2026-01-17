@@ -92,6 +92,9 @@ public:
 
   const DebugStepInfo& getDebugStepInfo() const { return debugStepInfo; }
 
+  // Clears pressure on next update() (warm-start uses previous pressure otherwise).
+  void resetPressure() { pressureNeedsClear = true; }
+
   void setup(glm::vec2 flowValuesSize) {
     ownsFlowBuffers = true;
     lastBoundaryMode = boundaryModeParameter.get();
@@ -159,6 +162,7 @@ public:
     softCircleShader.load();
 
     applyExpectedWrapModeToInternalBuffers();
+    resetPressure();
   }
 
   std::string getParameterGroupName() { return "Fluid Simulation"; }
@@ -194,6 +198,7 @@ public:
     const int boundaryMode = boundaryModeParameter.get();
     if (boundaryMode != lastBoundaryMode) {
       lastBoundaryMode = boundaryMode;
+      resetPressure();
       validateExternalBuffers();
     }
 
@@ -270,9 +275,7 @@ public:
 
     // compute
     divergenceRenderer.render(flowVelocitiesFboPtr->getSource());
-    pressuresFbo.getSource().begin();
-    pressuresFbo.getSource().clearColorBuffer(ofFloatColor(0.0, 0.0, 0.0, 0.0));
-    pressuresFbo.getSource().end();
+    clearPressureIfNeeded();
 
     const float pressureAlpha = -(dx * dx);
     pressureJacobiShader.render(pressuresFbo,
@@ -514,6 +517,21 @@ public:
     velocityCflClampShader.render(*flowVelocitiesFboPtr, dt, maxDisp);
   }
 
+  void clearPressureIfNeeded() {
+    if (!pressureNeedsClear) return;
+
+    auto clearFbo = [](ofFbo& fbo) {
+      if (!fbo.isAllocated()) return;
+      fbo.begin();
+      fbo.clearColorBuffer(ofFloatColor(0.0f, 0.0f, 0.0f, 0.0f));
+      fbo.end();
+    };
+
+    clearFbo(pressuresFbo.getSource());
+    clearFbo(pressuresFbo.getTarget());
+    pressureNeedsClear = false;
+  }
+
   bool validateExternalBuffers() {
     valid = false;
     validationLogged = false;
@@ -611,9 +629,9 @@ public:
   ofParameter<float> valueMaxParameter { "Value Max", 1.0f, 0.0f, 10.0f };
 
 //  ofParameter<float> temperatureAdvectDissipationParameter = AdvectShader::createDissipationParameter("temperature:");
-  ofParameter<int> valueDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Value ", 18);
-  ofParameter<int> velocityDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Velocity ", 18);
-  ofParameter<int> pressureDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Pressure ", 40);
+  ofParameter<int> valueDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Value ", 1);
+  ofParameter<int> velocityDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Velocity ", 1);
+  ofParameter<int> pressureDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Pressure ", 10);
 //  ofParameterGroup applyBouyancyParameters { "Bouyancy" };
 //  ofParameter<float> ambientTemperatureParameter = ApplyBouyancyShader::createAmbientTemperatureParameter();
 //  ofParameter<float> smokeBouyancyParameter = ApplyBouyancyShader::createSmokeBouyancyParameter();
@@ -625,6 +643,8 @@ public:
   bool valid = false;
   bool validationLogged = false;
   std::string validationError;
+
+  bool pressureNeedsClear = true;
 
   bool ownsFlowBuffers = false;
   int lastBoundaryMode = 0;
