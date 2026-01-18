@@ -20,6 +20,7 @@ std::string drawModeToString(int mode) {
     case 4: return "Pressure";
     case 5: return "Curl";
     case 6: return "Temperature";
+    case 7: return "Obstacles";
     default: return "Unknown";
   }
 }
@@ -31,7 +32,21 @@ void ofApp::setup() {
   ofBackground(0);
   ofDisableArbTex();
 
-  fluidSimulation.setup(ofGetWindowSize() * SCALE);
+  const glm::vec2 simSize = ofGetWindowSize() * SCALE;
+
+  valuesFboPtr = std::make_shared<PingPongFbo>();
+  valuesFboPtr->allocate(fluidSimulation.createFboSettings(simSize, GL_RGBA32F));
+  valuesFboPtr->clearFloat(0.0f, 0.0f, 0.0f, 0.0f);
+
+  velocitiesFboPtr = std::make_shared<PingPongFbo>();
+  velocitiesFboPtr->allocate(fluidSimulation.createFboSettings(simSize, GL_RGB32F));
+  velocitiesFboPtr->clearFloat(0.0f, 0.0f, 0.0f, 0.0f);
+
+  obstaclesFboPtr = std::make_shared<PingPongFbo>();
+  obstaclesFboPtr->allocate(fluidSimulation.createFboSettings(simSize, GL_RGBA32F));
+  obstaclesFboPtr->clearFloat(0.0f, 0.0f, 0.0f, 0.0f);
+
+  fluidSimulation.setup(valuesFboPtr, velocitiesFboPtr, obstaclesFboPtr);
 
   debugParameters.setName("Debug");
   debugParameters.add(drawModeParameter);
@@ -46,6 +61,9 @@ void ofApp::setup() {
   debugParameters.add(mouseTemperatureParameter);
   debugParameters.add(mouseTemperatureDeltaParameter);
   debugParameters.add(resetTemperatureParameter);
+  debugParameters.add(mouseObstaclesParameter);
+  debugParameters.add(mouseObstacleAlphaParameter);
+  debugParameters.add(resetObstaclesParameter);
   debugParameters.add(autoImpulseParameter);
   debugParameters.add(autoImpulsePerSecondParameter);
   debugParameters.add(autoImpulseRadiusPxParameter);
@@ -67,12 +85,19 @@ void ofApp::setup() {
   gui.setPosition(ofGetWidth() - gui.getWidth() - 10.0f, 10.0f);
 
   resetTemperatureParameter.addListener(this, &ofApp::resetTemperatureField);
+  resetObstaclesParameter.addListener(this, &ofApp::resetObstaclesField);
 
   reloadShaders();
 }
 
 void ofApp::resetTemperatureField() {
   fluidSimulation.resetTemperature();
+}
+
+void ofApp::resetObstaclesField() {
+  if (obstaclesFboPtr) {
+    obstaclesFboPtr->clearFloat(0.0f, 0.0f, 0.0f, 0.0f);
+  }
 }
 
 void ofApp::update() {
@@ -123,6 +148,19 @@ void ofApp::update() {
     }
   }
 
+  if (mouseObstaclesParameter.get() && obstaclesFboPtr && ofGetMousePressed()) {
+    const glm::vec2 centerPx { ofGetMouseX() * SCALE, ofGetMouseY() * SCALE };
+    const float radiusPx = mouseImpulseRadiusPxParameter.get() * SCALE;
+
+    obstaclesFboPtr->getSource().begin();
+    ofPushStyle();
+    ofEnableBlendMode(OF_BLENDMODE_ADD);
+    ofSetColor(255, 255, 255, static_cast<int>(255.0f * mouseObstacleAlphaParameter.get()));
+    ofDrawCircle(centerPx, radiusPx);
+    ofPopStyle();
+    obstaclesFboPtr->getSource().end();
+  }
+
   fluidSimulation.update();
 }
 
@@ -156,6 +194,9 @@ void ofApp::draw() {
       break;
     case DRAW_TEMPERATURE:
       drawScalarField(fluidSimulation.getTemperatureTexture(), w, h);
+      break;
+    case DRAW_OBSTACLES:
+      drawScalarField(fluidSimulation.getObstacleTexture(), w, h);
       break;
     default:
       fluidSimulation.draw(0, 0, w, h);
@@ -207,7 +248,7 @@ void ofApp::draw() {
        << "," << ofToString(buoyancyParams.getFloat("Gravity Force Y"), 3) << ")\n";
  
     ss << "Keys: [g] GUI  [i] info  [r] reload shaders\n";
-    ss << "Draw: [1] values  [2] velXY  [3] velMag  [4] div  [5] pressure  [6] curl  [7] temp";
+    ss << "Draw: [1] values  [2] velXY  [3] velMag  [4] div  [5] pressure  [6] curl  [7] temp  [8] obstacles";
 
     ofPushStyle();
     ofSetColor(255);
@@ -236,7 +277,7 @@ void ofApp::keyPressed(int key) {
     showInfoOverlayParameter = !showInfoOverlayParameter.get();
   } else if (key == 'r') {
     reloadShaders();
-  } else if (key >= '1' && key <= '7') {
+  } else if (key >= '1' && key <= '8') {
     drawModeParameter = (key - '1');
   }
 }

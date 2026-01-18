@@ -21,10 +21,12 @@ private:
     DRAW_PRESSURE = 4,
     DRAW_CURL = 5,
     DRAW_TEMPERATURE = 6,
+    DRAW_OBSTACLES = 7,
   };
 
   void reloadShaders();
   void resetTemperatureField();
+  void resetObstaclesField();
   void applyConstantVelocity(const glm::vec2& addVel);
   void drawVelocityXY(const ofTexture& velocityTex, float width, float height);
   void drawVelocityMagnitude(const ofTexture& velocityTex, float width, float height);
@@ -35,11 +37,15 @@ private:
 
   FluidSimulation fluidSimulation;
 
+  std::shared_ptr<PingPongFbo> valuesFboPtr;
+  std::shared_ptr<PingPongFbo> velocitiesFboPtr;
+  std::shared_ptr<PingPongFbo> obstaclesFboPtr;
+
   ofxPanel gui;
   ofParameterGroup parameters;
   ofParameterGroup debugParameters;
 
-  ofParameter<int> drawModeParameter { "Draw Mode", DRAW_VALUES, DRAW_VALUES, DRAW_TEMPERATURE };
+  ofParameter<int> drawModeParameter { "Draw Mode", DRAW_VALUES, DRAW_VALUES, DRAW_OBSTACLES };
   ofParameter<bool> showGuiParameter { "Show GUI", true };
   ofParameter<bool> showInfoOverlayParameter { "Show Info Overlay", true };
 
@@ -52,6 +58,9 @@ private:
   ofParameter<bool> mouseTemperatureParameter { "Mouse Temperature", false };
   ofParameter<float> mouseTemperatureDeltaParameter { "Mouse Temp Delta", 0.6f, -2.0f, 2.0f };
   ofParameter<void> resetTemperatureParameter { "Reset Temperature" };
+  ofParameter<bool> mouseObstaclesParameter { "Mouse Obstacles", false };
+  ofParameter<float> mouseObstacleAlphaParameter { "Mouse Obstacle Alpha", 1.0f, 0.0f, 1.0f };
+  ofParameter<void> resetObstaclesParameter { "Reset Obstacles" };
 
   ofParameter<bool> autoImpulseParameter { "Auto Impulse", false };
   ofParameter<float> autoImpulsePerSecondParameter { "Auto Impulses/s", 2.0f, 0.0f, 30.0f };

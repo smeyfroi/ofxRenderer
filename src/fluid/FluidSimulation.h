@@ -126,6 +126,20 @@ public:
 
     flowValuesFboPtr = std::move(flowValuesFboPtr_);
     flowVelocitiesFboPtr = std::move(flowVelocitiesFboPtr_);
+    obstaclesFboPtr.reset();
+    validateExternalBuffers();
+    setupInternals();
+  }
+
+  void setup(std::shared_ptr<PingPongFbo> flowValuesFboPtr_,
+             std::shared_ptr<PingPongFbo> flowVelocitiesFboPtr_,
+             std::shared_ptr<PingPongFbo> obstaclesFboPtr_) {
+    ownsFlowBuffers = false;
+    lastBoundaryMode = boundaryModeParameter.get();
+
+    flowValuesFboPtr = std::move(flowValuesFboPtr_);
+    flowVelocitiesFboPtr = std::move(flowVelocitiesFboPtr_);
+    obstaclesFboPtr = std::move(obstaclesFboPtr_);
     validateExternalBuffers();
     setupInternals();
   }
@@ -202,6 +216,11 @@ public:
       temperatureParameters.add(temperatureDiffusionIterationsParameter);
       parameters.add(temperatureParameters);
 
+      obstaclesParameters.add(obstaclesEnabledParameter);
+      obstaclesParameters.add(obstacleThresholdParameter);
+      obstaclesParameters.add(obstacleInvertParameter);
+      parameters.add(obstaclesParameters);
+
       parameters.add(valueDiffusionIterationsParameter);
       parameters.add(velocityDiffusionIterationsParameter);
       parameters.add(pressureDiffusionIterationsParameter);
@@ -228,8 +247,21 @@ public:
       validateExternalBuffers();
     }
 
+    const bool obstaclesEnabled = obstaclesEnabledParameter.get();
+    if (obstaclesEnabled != lastObstaclesEnabled) {
+      lastObstaclesEnabled = obstaclesEnabled;
+      resetPressure();
+      validateExternalBuffers();
+    }
+
     if (!isValid()) return;
- 
+
+    const bool useObstacles = obstaclesEnabled && obstaclesFboPtr && obstaclesFboPtr->getSource().isAllocated();
+    const ofTexture& obstaclesTex = useObstacles ? obstaclesFboPtr->getSource().getTexture()
+                                                 : flowValuesFboPtr->getSource().getTexture();
+    const float obstacleThreshold = obstacleThresholdParameter.get();
+    const bool obstacleInvert = obstacleInvertParameter.get();
+
     const float rawFrameDt = static_cast<float>(ofGetLastFrameTime());
     const float frameDt = clampFrameDt(rawFrameDt);
 
@@ -256,14 +288,22 @@ public:
                                 flowVelocitiesFboPtr->getSource().getTexture(),
                                 dt,
                                 velocityDissipation,
-                                0.0f);
+                                0.0f,
+                                obstaclesTex,
+                                useObstacles,
+                                obstacleThreshold,
+                                obstacleInvert);
     applyVelocityBoundariesIfNeeded();
 
     valueAdvectShader.render(*flowValuesFboPtr,
                               flowVelocitiesFboPtr->getSource().getTexture(),
                               dt,
                               valueDissipation,
-                              valueMaxParameter.get());
+                              valueMaxParameter.get(),
+                              obstaclesTex,
+                              useObstacles,
+                              obstacleThreshold,
+                              obstacleInvert);
 
     if (temperatureEnabledParameter.get()) {
       const float temperatureDissipation = persistenceToDissipation(temperatureAdvectDissipationParameter.get(), frameDt, 0.2f, 30.0f);
@@ -273,7 +313,11 @@ public:
                                     flowVelocitiesFboPtr->getSource().getTexture(),
                                     dt,
                                     temperatureDissipation,
-                                    0.0f);
+                                    0.0f,
+                                    obstaclesTex,
+                                    useObstacles,
+                                    obstacleThreshold,
+                                    obstacleInvert);
 
       debugStepInfo.temperatureSpreadCoeff = applyDiffusionIfEnabled(temperaturesFbo,
                                                                     temperatureJacobiShader,
@@ -282,7 +326,11 @@ public:
                                                                     dt,
                                                                     temperatureDiffusionIterationsParameter.get(),
                                                                     1.0e-4f,
-                                                                    1500.0f);
+                                                                    1500.0f,
+                                                                    obstaclesTex,
+                                                                    useObstacles,
+                                                                    obstacleThreshold,
+                                                                    obstacleInvert);
     }
 
     // diffuse (resolution-independent in cell units)
@@ -293,7 +341,11 @@ public:
                                                                dt,
                                                                velocityDiffusionIterationsParameter.get(),
                                                                1.0e-4f,
-                                                               80.0f);
+                                                               80.0f,
+                                                               obstaclesTex,
+                                                               useObstacles,
+                                                               obstacleThreshold,
+                                                               obstacleInvert);
     applyVelocityBoundariesIfNeeded();
 
     debugStepInfo.valueSpreadCoeff = applyDiffusionIfEnabled(*flowValuesFboPtr,
@@ -303,7 +355,11 @@ public:
                                                             dt,
                                                             valueDiffusionIterationsParameter.get(),
                                                             1.0e-4f,
-                                                            1500.0f);
+                                                            1500.0f,
+                                                            obstaclesTex,
+                                                            useObstacles,
+                                                            obstacleThreshold,
+                                                            obstacleInvert);
 
     // add forces
     vorticityRenderer.render(flowVelocitiesFboPtr->getSource());
@@ -313,7 +369,14 @@ public:
     const float vorticityStrength = std::clamp(vorticityParameter.get(), 0.0f, 1.0f) * VORTICITY_MAX;
     debugStepInfo.vorticityStrength = vorticityStrength;
 
-    applyVorticityForceShader.render(*flowVelocitiesFboPtr, vorticityRenderer.getFbo(), vorticityStrength, dt);
+    applyVorticityForceShader.render(*flowVelocitiesFboPtr,
+                                     vorticityRenderer.getFbo(),
+                                     vorticityStrength,
+                                     dt,
+                                     obstaclesTex,
+                                     useObstacles,
+                                     obstacleThreshold,
+                                     obstacleInvert);
     applyVelocityBoundariesIfNeeded();
     applyVelocityCflClamp(dt);
 
@@ -326,7 +389,11 @@ public:
                                               ambientTemperatureParameter.get(),
                                               temperatureBuoyancyThresholdParameter.get(),
                                               gravityForceXParameter.get(),
-                                              gravityForceYParameter.get());
+                                              gravityForceYParameter.get(),
+                                              obstaclesTex,
+                                              useObstacles,
+                                              obstacleThreshold,
+                                              obstacleInvert);
       } else {
         applyBouyancyShader.render(*flowVelocitiesFboPtr,
                                    *flowValuesFboPtr,
@@ -335,7 +402,11 @@ public:
                                    buoyancyDensityScaleParameter.get(),
                                    buoyancyThresholdParameter.get(),
                                    gravityForceXParameter.get(),
-                                   gravityForceYParameter.get());
+                                   gravityForceYParameter.get(),
+                                   obstaclesTex,
+                                   useObstacles,
+                                   obstacleThreshold,
+                                   obstacleInvert);
       }
 
       applyVelocityBoundariesIfNeeded();
@@ -343,7 +414,11 @@ public:
     }
  
     // compute
-    divergenceRenderer.render(flowVelocitiesFboPtr->getSource());
+    if (useObstacles) {
+      divergenceRenderer.renderWithObstacles(flowVelocitiesFboPtr->getSource(), obstaclesTex, obstacleThreshold, obstacleInvert);
+    } else {
+      divergenceRenderer.render(flowVelocitiesFboPtr->getSource());
+    }
     clearPressureIfNeeded();
 
     const float pressureAlpha = -(dx * dx);
@@ -352,9 +427,18 @@ public:
                                 dt,
                                 pressureAlpha,
                                 0.25,
-                                pressureDiffusionIterationsParameter.get());
+                                pressureDiffusionIterationsParameter.get(),
+                                obstaclesTex,
+                                useObstacles,
+                                obstacleThreshold,
+                                obstacleInvert);
 
-    subtractDivergenceShader.render(*flowVelocitiesFboPtr, pressuresFbo.getSource());
+    subtractDivergenceShader.render(*flowVelocitiesFboPtr,
+                                    pressuresFbo.getSource(),
+                                    obstaclesTex,
+                                    useObstacles,
+                                    obstacleThreshold,
+                                    obstacleInvert);
     applyVelocityBoundariesIfNeeded();
   }
   
@@ -372,6 +456,10 @@ public:
   const ofTexture& getPressureTexture() const { return pressuresFbo.getSource().getTexture(); }
   const ofTexture& getCurlTexture() const { return vorticityRenderer.getFbo().getTexture(); }
   const ofTexture& getTemperatureTexture() const { return temperaturesFbo.getSource().getTexture(); }
+  const ofTexture& getObstacleTexture() const {
+    if (obstaclesFboPtr && obstaclesFboPtr->getSource().isAllocated()) return obstaclesFboPtr->getSource().getTexture();
+    return flowValuesFboPtr->getSource().getTexture();
+  }
    
   // NOTE: this is not used by the MarkSynth Fluid wrapper; it has dedicated Mods instead
    void applyImpulse(const FluidSimulation::Impulse& impulse) {
@@ -390,13 +478,21 @@ public:
     constexpr float BASE_FPS = 30.0f;
     const float dt = dtParameter.get() * frameDt * BASE_FPS;
 
+    const bool useObstacles = obstaclesEnabledParameter.get() && obstaclesFboPtr && obstaclesFboPtr->getSource().isAllocated();
+    const ofTexture& obstaclesTex = useObstacles ? obstaclesFboPtr->getSource().getTexture()
+                                                 : flowValuesFboPtr->getSource().getTexture();
+
     addRadialImpulseShader.render(*flowVelocitiesFboPtr,
                                   impulse.position,
                                   impulse.radius,
                                   impulse.velocity,
                                   impulse.radialVelocity,
                                   impulse.swirlVelocity,
-                                  dt);
+                                  dt,
+                                  obstaclesTex,
+                                  useObstacles,
+                                  obstacleThresholdParameter.get(),
+                                  obstacleInvertParameter.get());
 //    ofFloatColor velocityValue { impulse.velocity.r, impulse.velocity.g, 0.0, 1.0 };
 //    softCircleShader.render(impulse.position, impulse.radius, velocityValue);
     
@@ -581,7 +677,11 @@ public:
                                        float dt,
                                        int iterations,
                                        float minRateCells,
-                                       float maxRateCells) {
+                                       float maxRateCells,
+                                       const ofTexture& obstaclesTex,
+                                       bool obstaclesEnabled,
+                                       float obstacleThreshold,
+                                       bool obstacleInvert) {
     if (iterations <= 0) return 0.0f;
 
     const float rateCells = spreadToDiffusionRateCells(spread, minRateCells, maxRateCells);
@@ -590,7 +690,16 @@ public:
     if (!diffusionToJacobiParams(rateCells, dt, alpha, rBeta)) return 0.0f;
 
     copyToFbo(field.getSource(), diffusionSource);
-    solver.render(field, diffusionSource.getTexture(), dt, alpha, rBeta, iterations);
+    solver.render(field,
+                  diffusionSource.getTexture(),
+                  dt,
+                  alpha,
+                  rBeta,
+                  iterations,
+                  obstaclesTex,
+                  obstaclesEnabled,
+                  obstacleThreshold,
+                  obstacleInvert);
     return rateCells;
   }
 
@@ -687,6 +796,30 @@ public:
       return false;
     }
 
+    if (obstaclesEnabledParameter.get()) {
+      if (!obstaclesFboPtr || !obstaclesFboPtr->getSource().isAllocated()) {
+        validationError = "FluidSimulation ObstaclesEnabled requires an allocated obstacles buffer";
+        logValidationErrorOnce();
+        return false;
+      }
+
+      const int w = static_cast<int>(flowVelocitiesFboPtr->getWidth());
+      const int h = static_cast<int>(flowVelocitiesFboPtr->getHeight());
+      const int ow = static_cast<int>(obstaclesFboPtr->getWidth());
+      const int oh = static_cast<int>(obstaclesFboPtr->getHeight());
+      if (ow != w || oh != h) {
+        validationError = std::string("FluidSimulation obstacles size must match velocities (expected " )
+                          + ofToString(w) + "x" + ofToString(h) + " got " + ofToString(ow) + "x" + ofToString(oh) + ")";
+        logValidationErrorOnce();
+        return false;
+      }
+
+      if (!validateTexture(obstaclesFboPtr->getSource().getTexture(), "obstacles")) {
+        logValidationErrorOnce();
+        return false;
+      }
+    }
+
     valid = true;
     return true;
   }
@@ -730,6 +863,11 @@ public:
   ofParameter<float> temperatureSpreadParameter { "Temperature Spread", 0.0f, 0.0f, 1.0f };
   ofParameter<int> temperatureDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Temperature ", 0);
 
+  ofParameterGroup obstaclesParameters { "Obstacles" };
+  ofParameter<bool> obstaclesEnabledParameter { "ObstaclesEnabled", false };
+  ofParameter<float> obstacleThresholdParameter { "Obstacle Threshold", 0.5f, 0.0f, 1.0f };
+  ofParameter<bool> obstacleInvertParameter { "Obstacle Invert", false };
+
   ofParameter<int> valueDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Value ", 1);
   ofParameter<int> velocityDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Velocity ", 1);
   ofParameter<int> pressureDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Pressure ", 10);
@@ -752,9 +890,11 @@ public:
 
   bool ownsFlowBuffers = false;
   int lastBoundaryMode = 0;
+  bool lastObstaclesEnabled = false;
 
   std::shared_ptr<PingPongFbo> flowValuesFboPtr;
   std::shared_ptr<PingPongFbo> flowVelocitiesFboPtr;
+  std::shared_ptr<PingPongFbo> obstaclesFboPtr;
   PingPongFbo temperaturesFbo;
 
   AdvectShader valueAdvectShader;
