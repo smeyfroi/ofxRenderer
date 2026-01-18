@@ -706,7 +706,7 @@ public:
   // Interpreted as a dimensionless simulation speed tuned around a baseline framerate.
   // Effective dt used in the solver is: dtEffective = ofGetLastFrameTime() * BASE_FPS * dt.
   // With BASE_FPS=30, dtEffective ~= dt at 30fps.
-  ofParameter<float> dtParameter { "dt", 0.03f, 0.0f, 0.3f };
+  ofParameter<float> dtParameter { "dt", 0.03f, 0.0f, 0.04f };
 
   // Normalized artist control. Internally mapped to a vorticity confinement strength.
   ofParameter<float> vorticityParameter { "Vorticity", 0.15f, 0.0f, 1.0f };
