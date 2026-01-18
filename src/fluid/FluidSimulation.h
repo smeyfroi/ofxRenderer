@@ -725,7 +725,7 @@ public:
   ofParameter<float> valueMaxParameter { "Value Max", 1.0f, 0.0f, 10.0f };
 
   ofParameterGroup temperatureParameters { "Temperature" };
-  ofParameter<bool> temperatureEnabledParameter { "Enabled", false };
+  ofParameter<bool> temperatureEnabledParameter { "TempEnabled", false };
   ofParameter<float> temperatureAdvectDissipationParameter { "Temperature Dissipation", 0.9f, 0.0f, 1.0f };
   ofParameter<float> temperatureSpreadParameter { "Temperature Spread", 0.0f, 0.0f, 1.0f };
   ofParameter<int> temperatureDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Temperature ", 0);
