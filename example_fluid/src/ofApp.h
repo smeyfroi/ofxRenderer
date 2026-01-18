@@ -20,9 +20,11 @@ private:
     DRAW_DIVERGENCE = 3,
     DRAW_PRESSURE = 4,
     DRAW_CURL = 5,
+    DRAW_TEMPERATURE = 6,
   };
 
   void reloadShaders();
+  void resetTemperatureField();
   void applyConstantVelocity(const glm::vec2& addVel);
   void drawVelocityXY(const ofTexture& velocityTex, float width, float height);
   void drawVelocityMagnitude(const ofTexture& velocityTex, float width, float height);
@@ -37,7 +39,7 @@ private:
   ofParameterGroup parameters;
   ofParameterGroup debugParameters;
 
-  ofParameter<int> drawModeParameter { "Draw Mode", DRAW_VALUES, DRAW_VALUES, DRAW_CURL };
+  ofParameter<int> drawModeParameter { "Draw Mode", DRAW_VALUES, DRAW_VALUES, DRAW_TEMPERATURE };
   ofParameter<bool> showGuiParameter { "Show GUI", true };
   ofParameter<bool> showInfoOverlayParameter { "Show Info Overlay", true };
 
@@ -47,6 +49,9 @@ private:
   ofParameter<float> mouseImpulseSwirlVelocityParameter { "Mouse Swirl Vel", 2.0f, -50.0f, 50.0f };
   ofParameter<float> mouseImpulseDragScaleParameter { "Mouse Drag Scale", 0.4f, 0.0f, 5.0f };
   ofParameter<float> mouseImpulseAlphaParameter { "Mouse Alpha", 0.1f, 0.0f, 1.0f };
+  ofParameter<bool> mouseTemperatureParameter { "Mouse Temperature", false };
+  ofParameter<float> mouseTemperatureDeltaParameter { "Mouse Temp Delta", 0.6f, -2.0f, 2.0f };
+  ofParameter<void> resetTemperatureParameter { "Reset Temperature" };
 
   ofParameter<bool> autoImpulseParameter { "Auto Impulse", false };
   ofParameter<float> autoImpulsePerSecondParameter { "Auto Impulses/s", 2.0f, 0.0f, 30.0f };
@@ -54,6 +59,8 @@ private:
   ofParameter<float> autoImpulseRadialVelocityParameter { "Auto Impulse Radial Vel", 1.5f, -50.0f, 50.0f };
   ofParameter<float> autoImpulseSwirlVelocityParameter { "Auto Impulse Swirl Vel", 0.0f, -50.0f, 50.0f };
   ofParameter<float> autoImpulseColorAlphaParameter { "Auto Impulse Alpha", 0.08f, 0.0f, 1.0f };
+  ofParameter<bool> autoTemperatureParameter { "Auto Temperature", false };
+  ofParameter<float> autoTemperatureDeltaParameter { "Auto Temp Delta", 0.8f, -2.0f, 2.0f };
   float autoImpulseAccumulator = 0.0f;
 
   ofParameter<bool> constantDriftParameter { "Constant Drift", false };

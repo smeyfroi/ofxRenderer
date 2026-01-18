@@ -21,6 +21,7 @@
 #include "VelocityBoundaryShader.h"
 #include "VelocityCflClampShader.h"
 #include "ApplyBouyancyShader.h"
+#include "ApplyTemperatureBuoyancyShader.h"
 #include "AddRadialImpulseShader.h"
 #include "SoftCircleShader.h"
 
@@ -87,10 +88,18 @@ public:
     float valueDissipation = 1.0f;
     float velocitySpreadCoeff = 0.0f;
     float valueSpreadCoeff = 0.0f;
+    float temperatureDissipation = 1.0f;
+    float temperatureSpreadCoeff = 0.0f;
     float vorticityStrength = 0.0f;
   };
 
   const DebugStepInfo& getDebugStepInfo() const { return debugStepInfo; }
+
+  void resetTemperature() {
+    if (!isValid()) return;
+    if (!temperaturesFbo.isAllocated()) return;
+    temperaturesFbo.clearFloat(ambientTemperatureParameter.get(), 0.0f, 0.0f, 0.0f);
+  }
 
   // Clears pressure on next update() (warm-start uses previous pressure otherwise).
   void resetPressure() { pressureNeedsClear = true; }
@@ -152,8 +161,19 @@ public:
     allocateDiffusionSourceIfNeeded(velocityDiffusionSourceFbo, flowVelocitiesSize.x, flowVelocitiesSize.y, getExpectedWrapMode());
     allocateDiffusionSourceIfNeeded(valueDiffusionSourceFbo, flowValuesSize.x, flowValuesSize.y, getExpectedWrapMode());
 
-    applyBouyancyShader.load();
+    temperatureAdvectShader.load();
+    temperatureJacobiShader.load();
+    allocateDiffusionSourceIfNeeded(temperatureDiffusionSourceFbo, flowVelocitiesSize.x, flowVelocitiesSize.y, getExpectedWrapMode());
 
+    if (!temperaturesFbo.isAllocated()
+        || static_cast<int>(temperaturesFbo.getWidth()) != flowVelocitiesSize.x
+        || static_cast<int>(temperaturesFbo.getHeight()) != flowVelocitiesSize.y) {
+      temperaturesFbo.allocate(flowVelocitiesSize, FLOAT_A_MODE, getExpectedWrapMode());
+      temperaturesFbo.clearFloat(ambientTemperatureParameter.get(), 0.0f, 0.0f, 0.0f);
+    }
+
+    applyBouyancyShader.load();
+    applyTemperatureBuoyancyShader.load();
 
     addRadialImpulseShader.load();
     softCircleShader.load();
@@ -175,7 +195,13 @@ public:
       parameters.add(valueSpreadParameter);
       parameters.add(velocitySpreadParameter);
       parameters.add(valueMaxParameter);
-//      parameters.add(temperatureAdvectDissipationParameter);
+
+      temperatureParameters.add(temperatureEnabledParameter);
+      temperatureParameters.add(temperatureAdvectDissipationParameter);
+      temperatureParameters.add(temperatureSpreadParameter);
+      temperatureParameters.add(temperatureDiffusionIterationsParameter);
+      parameters.add(temperatureParameters);
+
       parameters.add(valueDiffusionIterationsParameter);
       parameters.add(velocityDiffusionIterationsParameter);
       parameters.add(pressureDiffusionIterationsParameter);
@@ -184,6 +210,9 @@ public:
       buoyancyParameters.add(buoyancyThresholdParameter);
       buoyancyParameters.add(gravityForceXParameter);
       buoyancyParameters.add(gravityForceYParameter);
+      buoyancyParameters.add(buoyancyUseTemperatureParameter);
+      buoyancyParameters.add(ambientTemperatureParameter);
+      buoyancyParameters.add(temperatureBuoyancyThresholdParameter);
       parameters.add(buoyancyParameters);
     }
     return parameters;
@@ -231,10 +260,30 @@ public:
     applyVelocityBoundariesIfNeeded();
 
     valueAdvectShader.render(*flowValuesFboPtr,
-                             flowVelocitiesFboPtr->getSource().getTexture(),
-                             dt,
-                             valueDissipation,
-                             valueMaxParameter.get());
+                              flowVelocitiesFboPtr->getSource().getTexture(),
+                              dt,
+                              valueDissipation,
+                              valueMaxParameter.get());
+
+    if (temperatureEnabledParameter.get()) {
+      const float temperatureDissipation = persistenceToDissipation(temperatureAdvectDissipationParameter.get(), frameDt, 0.2f, 30.0f);
+      debugStepInfo.temperatureDissipation = temperatureDissipation;
+
+      temperatureAdvectShader.render(temperaturesFbo,
+                                    flowVelocitiesFboPtr->getSource().getTexture(),
+                                    dt,
+                                    temperatureDissipation,
+                                    0.0f);
+
+      debugStepInfo.temperatureSpreadCoeff = applyDiffusionIfEnabled(temperaturesFbo,
+                                                                    temperatureJacobiShader,
+                                                                    temperatureDiffusionSourceFbo,
+                                                                    temperatureSpreadParameter.get(),
+                                                                    dt,
+                                                                    temperatureDiffusionIterationsParameter.get(),
+                                                                    1.0e-4f,
+                                                                    1500.0f);
+    }
 
     // diffuse (resolution-independent in cell units)
     debugStepInfo.velocitySpreadCoeff = applyDiffusionIfEnabled(*flowVelocitiesFboPtr,
@@ -269,14 +318,26 @@ public:
     applyVelocityCflClamp(dt);
 
     if (buoyancyStrengthParameter.get() > 0.0f) {
-      applyBouyancyShader.render(*flowVelocitiesFboPtr,
-                                *flowValuesFboPtr,
-                                dt,
-                                buoyancyStrengthParameter.get(),
-                                buoyancyDensityScaleParameter.get(),
-                                buoyancyThresholdParameter.get(),
-                                gravityForceXParameter.get(),
-                                gravityForceYParameter.get());
+      if (buoyancyUseTemperatureParameter.get()) {
+        applyTemperatureBuoyancyShader.render(*flowVelocitiesFboPtr,
+                                              temperaturesFbo,
+                                              dt,
+                                              buoyancyStrengthParameter.get(),
+                                              ambientTemperatureParameter.get(),
+                                              temperatureBuoyancyThresholdParameter.get(),
+                                              gravityForceXParameter.get(),
+                                              gravityForceYParameter.get());
+      } else {
+        applyBouyancyShader.render(*flowVelocitiesFboPtr,
+                                   *flowValuesFboPtr,
+                                   dt,
+                                   buoyancyStrengthParameter.get(),
+                                   buoyancyDensityScaleParameter.get(),
+                                   buoyancyThresholdParameter.get(),
+                                   gravityForceXParameter.get(),
+                                   gravityForceYParameter.get());
+      }
+
       applyVelocityBoundariesIfNeeded();
       applyVelocityCflClamp(dt);
     }
@@ -310,8 +371,8 @@ public:
   const ofTexture& getDivergenceTexture() const { return divergenceRenderer.getFbo().getTexture(); }
   const ofTexture& getPressureTexture() const { return pressuresFbo.getSource().getTexture(); }
   const ofTexture& getCurlTexture() const { return vorticityRenderer.getFbo().getTexture(); }
-//  PingPongFbo& getTemperaturesFbo() { return temperaturesFbo; }
-  
+  const ofTexture& getTemperatureTexture() const { return temperaturesFbo.getSource().getTexture(); }
+   
   // NOTE: this is not used by the MarkSynth Fluid wrapper; it has dedicated Mods instead
    void applyImpulse(const FluidSimulation::Impulse& impulse) {
      if (!isValid()) return;
@@ -341,6 +402,23 @@ public:
     
 //    glm::vec4 temperatureValue { impulse.temperature, 0.0, 0.0, 0.0 };
 //    addImpulseSpotShader.render(temperaturesFbo, impulse.position, impulse.radius, temperatureValue);
+  }
+
+  void applyTemperatureImpulse(const glm::vec2& positionPx, float radiusPx, float temperatureDelta) {
+    if (!isValid()) return;
+    if (temperatureDelta == 0.0f) return;
+
+    temperaturesFbo.getSource().begin();
+
+    ofPushStyle();
+    ofEnableBlendMode(OF_BLENDMODE_ADD);
+
+    // Use "dab" falloff so the injected value has a soft spatial falloff.
+    softCircleShader.render(positionPx, radiusPx, ofFloatColor { temperatureDelta, 0.0f, 0.0f, 1.0f }, 0.35f, 1);
+
+    ofPopStyle();
+
+    temperaturesFbo.getSource().end();
   }
   
  private:
@@ -386,6 +464,9 @@ public:
     setFboWrap(vorticityRenderer.getFbo(), wrap);
     setFboWrap(velocityDiffusionSourceFbo, wrap);
     setFboWrap(valueDiffusionSourceFbo, wrap);
+    setFboWrap(temperatureDiffusionSourceFbo, wrap);
+    setFboWrap(temperaturesFbo.getSource(), wrap);
+    setFboWrap(temperaturesFbo.getTarget(), wrap);
   }
 
   void applyExpectedWrapModeToFlowBuffersIfOwned() {
@@ -643,7 +724,12 @@ public:
   // Set to 0 to disable.
   ofParameter<float> valueMaxParameter { "Value Max", 1.0f, 0.0f, 10.0f };
 
-//  ofParameter<float> temperatureAdvectDissipationParameter = AdvectShader::createDissipationParameter("temperature:");
+  ofParameterGroup temperatureParameters { "Temperature" };
+  ofParameter<bool> temperatureEnabledParameter { "Enabled", false };
+  ofParameter<float> temperatureAdvectDissipationParameter { "Temperature Dissipation", 0.9f, 0.0f, 1.0f };
+  ofParameter<float> temperatureSpreadParameter { "Temperature Spread", 0.0f, 0.0f, 1.0f };
+  ofParameter<int> temperatureDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Temperature ", 0);
+
   ofParameter<int> valueDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Value ", 1);
   ofParameter<int> velocityDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Velocity ", 1);
   ofParameter<int> pressureDiffusionIterationsParameter = JacobiShader::createIterationsParameter("Pressure ", 10);
@@ -653,6 +739,9 @@ public:
   ofParameter<float> buoyancyThresholdParameter = ApplyBouyancyShader::createDensityThresholdParameter();
   ofParameter<float> gravityForceXParameter = ApplyBouyancyShader::createGravityForceXParameter();
   ofParameter<float> gravityForceYParameter = ApplyBouyancyShader::createGravityForceYParameter();
+  ofParameter<bool> buoyancyUseTemperatureParameter { "Use Temperature", false };
+  ofParameter<float> ambientTemperatureParameter { "Ambient Temperature", 0.0f, -1.0f, 1.0f };
+  ofParameter<float> temperatureBuoyancyThresholdParameter { "Temperature Threshold", 0.0f, 0.0f, 1.0f };
   
 
   bool valid = false;
@@ -666,12 +755,15 @@ public:
 
   std::shared_ptr<PingPongFbo> flowValuesFboPtr;
   std::shared_ptr<PingPongFbo> flowVelocitiesFboPtr;
-//  PingPongFbo temperaturesFbo;
+  PingPongFbo temperaturesFbo;
+
   AdvectShader valueAdvectShader;
   AdvectShader velocityAdvectShader;
-//  AdvectShader temperaturesAdvectShader;
+  AdvectShader temperatureAdvectShader;
+
   JacobiShader valueJacobiShader;
   JacobiShader velocityJacobiShader;
+  JacobiShader temperatureJacobiShader;
   DivergenceRenderer divergenceRenderer;
   PingPongFbo pressuresFbo;
   JacobiShader pressureJacobiShader;
@@ -682,7 +774,9 @@ public:
   VelocityCflClampShader velocityCflClampShader;
   ofFbo velocityDiffusionSourceFbo;
   ofFbo valueDiffusionSourceFbo;
+  ofFbo temperatureDiffusionSourceFbo;
   ApplyBouyancyShader applyBouyancyShader;
+  ApplyTemperatureBuoyancyShader applyTemperatureBuoyancyShader;
   
   SoftCircleShader softCircleShader;
   AddRadialImpulseShader addRadialImpulseShader;

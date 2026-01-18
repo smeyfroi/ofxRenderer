@@ -6,7 +6,7 @@ int main( ){
 
 	ofGLWindowSettings settings;
 	settings.setGLVersion(4, 1);
-	settings.setSize(1280, 960);
+	settings.setSize(1280, 1200);
 
 	auto window = ofCreateWindow(settings);
 

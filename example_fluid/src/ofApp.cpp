@@ -19,6 +19,7 @@ std::string drawModeToString(int mode) {
     case 3: return "Divergence";
     case 4: return "Pressure";
     case 5: return "Curl";
+    case 6: return "Temperature";
     default: return "Unknown";
   }
 }
@@ -42,12 +43,17 @@ void ofApp::setup() {
   debugParameters.add(mouseImpulseSwirlVelocityParameter);
   debugParameters.add(mouseImpulseDragScaleParameter);
   debugParameters.add(mouseImpulseAlphaParameter);
+  debugParameters.add(mouseTemperatureParameter);
+  debugParameters.add(mouseTemperatureDeltaParameter);
+  debugParameters.add(resetTemperatureParameter);
   debugParameters.add(autoImpulseParameter);
   debugParameters.add(autoImpulsePerSecondParameter);
   debugParameters.add(autoImpulseRadiusPxParameter);
   debugParameters.add(autoImpulseRadialVelocityParameter);
   debugParameters.add(autoImpulseSwirlVelocityParameter);
   debugParameters.add(autoImpulseColorAlphaParameter);
+  debugParameters.add(autoTemperatureParameter);
+  debugParameters.add(autoTemperatureDeltaParameter);
   debugParameters.add(constantDriftParameter);
   debugParameters.add(driftVelocityParameter);
   debugParameters.add(velocityVizScaleParameter);
@@ -60,7 +66,13 @@ void ofApp::setup() {
   gui.setup(parameters);
   gui.setPosition(ofGetWidth() - gui.getWidth() - 10.0f, 10.0f);
 
+  resetTemperatureParameter.addListener(this, &ofApp::resetTemperatureField);
+
   reloadShaders();
+}
+
+void ofApp::resetTemperatureField() {
+  fluidSimulation.resetTemperature();
 }
 
 void ofApp::update() {
@@ -86,6 +98,9 @@ void ofApp::update() {
         1.0f,
       };
       fluidSimulation.applyImpulse(impulse);
+      if (autoTemperatureParameter.get()) {
+        fluidSimulation.applyTemperatureImpulse(impulse.position, impulse.radius, autoTemperatureDeltaParameter.get());
+      }
     }
   }
 
@@ -103,6 +118,9 @@ void ofApp::update() {
       1.0f,
     };
     fluidSimulation.applyImpulse(impulse);
+    if (mouseTemperatureParameter.get()) {
+      fluidSimulation.applyTemperatureImpulse(impulse.position, impulse.radius, mouseTemperatureDeltaParameter.get());
+    }
   }
 
   fluidSimulation.update();
@@ -136,6 +154,9 @@ void ofApp::draw() {
     case DRAW_CURL:
       drawScalarField(fluidSimulation.getCurlTexture(), w, h);
       break;
+    case DRAW_TEMPERATURE:
+      drawScalarField(fluidSimulation.getTemperatureTexture(), w, h);
+      break;
     default:
       fluidSimulation.draw(0, 0, w, h);
       break;
@@ -156,6 +177,13 @@ void ofApp::draw() {
     ss << "Vel:    " << velTex.getWidth() << "x" << velTex.getHeight() << " format=" << glInternalFormatToString(velData.glInternalFormat)
        << " wrap=" << glWrapToString(velData.wrapModeHorizontal) << "," << glWrapToString(velData.wrapModeVertical)
        << " tex_u/t=" << ofToString(velData.tex_u, 3) << "," << ofToString(velData.tex_t, 3) << "\n";
+
+    const auto& tempTex = fluidSimulation.getTemperatureTexture();
+    const auto& tempData = tempTex.getTextureData();
+    ss << "Temp:   " << tempTex.getWidth() << "x" << tempTex.getHeight() << " format=" << glInternalFormatToString(tempData.glInternalFormat)
+       << " wrap=" << glWrapToString(tempData.wrapModeHorizontal) << "," << glWrapToString(tempData.wrapModeVertical)
+       << " tex_u/t=" << ofToString(tempData.tex_u, 3) << "," << ofToString(tempData.tex_t, 3) << "\n";
+
     const auto& step = fluidSimulation.getDebugStepInfo();
     ss << "dtEffective: " << ofToString(step.dtEffective, 5)
        << " (rawFrameDt=" << ofToString(step.rawFrameDt, 5)
@@ -163,9 +191,11 @@ void ofApp::draw() {
     ss << "dx: " << ofToString(step.dx, 6) << "\n";
     ss << "ValueMax: " << ofToString(fluidSimulation.getParameterGroup().getFloat("Value Max"), 3) << "\n";
     ss << "Dissipation: value=" << ofToString(step.valueDissipation, 6)
-       << " vel=" << ofToString(step.velocityDissipation, 6) << "\n";
+       << " vel=" << ofToString(step.velocityDissipation, 6)
+       << " temp=" << ofToString(step.temperatureDissipation, 6) << "\n";
     ss << "Spread coeff: value=" << ofToString(step.valueSpreadCoeff, 8)
-       << " vel=" << ofToString(step.velocitySpreadCoeff, 8) << "\n";
+       << " vel=" << ofToString(step.velocitySpreadCoeff, 8)
+       << " temp=" << ofToString(step.temperatureSpreadCoeff, 8) << "\n";
     ss << "Vorticity strength: " << ofToString(step.vorticityStrength, 4) << "\n";
 
     auto& simParams = fluidSimulation.getParameterGroup();
@@ -177,7 +207,7 @@ void ofApp::draw() {
        << "," << ofToString(buoyancyParams.getFloat("Gravity Force Y"), 3) << ")\n";
  
     ss << "Keys: [g] GUI  [i] info  [r] reload shaders\n";
-    ss << "Draw: [1] values  [2] velXY  [3] velMag  [4] div  [5] pressure  [6] curl";
+    ss << "Draw: [1] values  [2] velXY  [3] velMag  [4] div  [5] pressure  [6] curl  [7] temp";
 
     ofPushStyle();
     ofSetColor(255);
@@ -206,7 +236,7 @@ void ofApp::keyPressed(int key) {
     showInfoOverlayParameter = !showInfoOverlayParameter.get();
   } else if (key == 'r') {
     reloadShaders();
-  } else if (key >= '1' && key <= '6') {
+  } else if (key >= '1' && key <= '7') {
     drawModeParameter = (key - '1');
   }
 }
