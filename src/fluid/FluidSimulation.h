@@ -32,8 +32,6 @@
 // NOTES:
 // - How to set up dissipation params (e.g. https://github.com/patriciogonzalezvivo/ofxFluid/blob/master/src/ofxFluid.cpp#L291)
 
-// TODO: temperature has never worked
-// TODO: bouyancy has never worked
 class FluidSimulation {
   
 #ifdef TARGET_MAC
