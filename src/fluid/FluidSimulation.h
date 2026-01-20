@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "ofAppRunner.h" // ofGetLastFrameTime()
@@ -90,6 +91,35 @@ public:
     float temperatureSpreadCoeff = 0.0f;
     float vorticityStrength = 0.0f;
   };
+
+  struct ParameterOverrides {
+    std::optional<float> dt;
+    std::optional<float> vorticity;
+    std::optional<float> valueAdvectDissipation;
+    std::optional<float> velocityAdvectDissipation;
+
+    bool operator==(const ParameterOverrides& other) const {
+      return dt == other.dt && vorticity == other.vorticity && valueAdvectDissipation == other.valueAdvectDissipation
+             && velocityAdvectDissipation == other.velocityAdvectDissipation;
+    }
+    bool operator!=(const ParameterOverrides& other) const { return !(*this == other); }
+  };
+
+  void setParameterOverrides(const ParameterOverrides& overrides) {
+    if (parameterOverrides_ == overrides) return;
+    parameterOverrides_ = overrides;
+  }
+
+  void clearParameterOverrides() { setParameterOverrides({}); }
+
+  float getDtEffective() const { return parameterOverrides_.dt.value_or(dtParameter.get()); }
+  float getVorticityEffective() const { return parameterOverrides_.vorticity.value_or(vorticityParameter.get()); }
+  float getValueAdvectDissipationEffective() const {
+    return parameterOverrides_.valueAdvectDissipation.value_or(valueAdvectDissipationParameter.get());
+  }
+  float getVelocityAdvectDissipationEffective() const {
+    return parameterOverrides_.velocityAdvectDissipation.value_or(velocityAdvectDissipationParameter.get());
+  }
 
   const DebugStepInfo& getDebugStepInfo() const { return debugStepInfo; }
 
@@ -265,8 +295,9 @@ public:
 
     // dtParameter is tuned relative to a baseline framerate (historically 30fps).
     // At 30fps, dtEffective ~= dtParameter.
-    constexpr float BASE_FPS = 30.0f;
-    const float dt = dtParameter.get() * frameDt * BASE_FPS;
+    // Effective dt used by the solver is: dt = dtParameter * frameDt * BASE_FPS.
+    static constexpr float BASE_FPS = 30.0f;
+    const float dt = getDtEffective() * frameDt * BASE_FPS;
 
     debugStepInfo.rawFrameDt = rawFrameDt;
     debugStepInfo.frameDt = frameDt;
@@ -276,8 +307,8 @@ public:
     const float dx = 1.0f / std::max(1.0f, gridSize);
     debugStepInfo.dx = dx;
 
-    const float velocityDissipation = persistenceToDissipation(velocityAdvectDissipationParameter.get(), frameDt, 0.05f, 6.0f);
-    const float valueDissipation = persistenceToDissipation(valueAdvectDissipationParameter.get(), frameDt, 0.2f, 30.0f);
+    const float velocityDissipation = persistenceToDissipation(getVelocityAdvectDissipationEffective(), frameDt, 0.05f, 6.0f);
+    const float valueDissipation = persistenceToDissipation(getValueAdvectDissipationEffective(), frameDt, 0.2f, 30.0f);
     debugStepInfo.velocityDissipation = velocityDissipation;
     debugStepInfo.valueDissipation = valueDissipation;
 
@@ -364,7 +395,7 @@ public:
 
     // Normalized 0..1 control mapped to the empirically useful range.
     constexpr float VORTICITY_MAX = 0.3f;
-    const float vorticityStrength = std::clamp(vorticityParameter.get(), 0.0f, 1.0f) * VORTICITY_MAX;
+    const float vorticityStrength = std::clamp(getVorticityEffective(), 0.0f, 1.0f) * VORTICITY_MAX;
     debugStepInfo.vorticityStrength = vorticityStrength;
 
     applyVorticityForceShader.render(*flowVelocitiesFboPtr,
@@ -474,7 +505,7 @@ public:
     const float rawFrameDt = static_cast<float>(ofGetLastFrameTime());
     const float frameDt = clampFrameDt(rawFrameDt);
     constexpr float BASE_FPS = 30.0f;
-    const float dt = dtParameter.get() * frameDt * BASE_FPS;
+    const float dt = getDtEffective() * frameDt * BASE_FPS;
 
     const bool useObstacles = obstaclesEnabledParameter.get() && obstaclesFboPtr && obstaclesFboPtr->getSource().isAllocated();
     const ofTexture& obstaclesTex = useObstacles ? obstaclesFboPtr->getSource().getTexture()
@@ -919,5 +950,6 @@ public:
   SoftCircleShader softCircleShader;
   AddRadialImpulseShader addRadialImpulseShader;
 
+  ParameterOverrides parameterOverrides_;
   DebugStepInfo debugStepInfo;
 };
