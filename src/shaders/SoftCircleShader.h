@@ -7,9 +7,9 @@
 
 #pragma once
 
-#include "Shader.h"
+#include "../Shader.h"
 #include "ofGraphics.h"
-#include "UnitQuadMesh.h"
+#include "../UnitQuadMesh.h"
 
 class SoftCircleShader : public Shader {
 
@@ -40,19 +40,15 @@ protected:
                   float normalizedDist = dist  * 2.0;
                   if (normalizedDist > 1.0) discard;
 
-                  // Linear smoothstep
-//                  float alpha = 1.0 - smoothstep(1.0 - fadeWidth, 1.0, normalizedDist);
-                  
-                  // Quadratic falloff for more perceptually even brightness
-//                  float alpha = 1.0 - (normalizedDist * normalizedDist);
-//                  alpha = smoothstep(0.0, fadeWidth, alpha);
-                  
-                  // Exponential falloff (very smooth, natural light-like)
-                  float alpha = exp(-normalizedDist * normalizedDist * 3.0);
-                  
-                  // Cubic fallof (stronger centre)
-//                  float alpha = 1.0 - (normalizedDist * normalizedDist * normalizedDist);
-                  
+                  // Softness is edge width in normalized circle space.
+                  // Use derivatives so Softness=0 is still anti-aliased.
+                  float aa = fwidth(normalizedDist) * 1.5;
+                  float edgeWidth = max(fadeWidth, aa);
+                  edgeWidth = clamp(edgeWidth, 0.0005, 1.0);
+
+                  // Edge falloff: 1 inside, fades to 0 near the boundary.
+                  float edgeAlpha = 1.0 - smoothstep(1.0 - edgeWidth, 1.0, normalizedDist);
+
                   if (falloff == 1) {
                     // Dab: quadratic falloff for broader, softer marks
                     // Uses premultiplied alpha to avoid halo artifacts when marks overlap
@@ -62,8 +58,8 @@ protected:
                     float a = dabAlpha * color.a;
                     fragColor = vec4(color.rgb * a, a);
                   } else {
-                    // Glow: exponential falloff for sharp center, glowing marks
-                    fragColor = vec4(color.rgb, color.a * alpha);
+                    // Glow: edge-controlled falloff (Softness)
+                    fragColor = vec4(color.rgb, color.a * edgeAlpha);
                   }
                 }
                 );
