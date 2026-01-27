@@ -72,7 +72,9 @@ public:
     shader.setUniform1f("dt", dt);
 
     const float dx = invMinDim;
-    const float maxDisp = 4.0f * dx;
+    // Hard safety clamp: limit injected displacement per step.
+    // 1.0 cell/step keeps impulses from “blowing up” the velocity field.
+    const float maxDisp = 1.0f * dx;
     shader.setUniform1f("maxDisp", maxDisp);
 
     velocities.getSource().draw(0, 0);
