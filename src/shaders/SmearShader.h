@@ -298,8 +298,14 @@ protected:
       }
 
       void main() {
-        vec2 field1TranslateBy = (field1Bias + texture(field1Texture, texCoordVarying).xy) * field1Multiplier;
-        vec2 field2TranslateBy = (field2Bias + texture(field2Texture, texCoordVarying).xy) * field2Multiplier;
+        // Sanitize field samples: NaN/Inf can occasionally appear and will destabilize the feedback loop.
+        vec2 field1Sample = texture(field1Texture, texCoordVarying).xy;
+        vec2 field2Sample = texture(field2Texture, texCoordVarying).xy;
+        if (any(isnan(field1Sample)) || any(isinf(field1Sample))) field1Sample = vec2(0.0);
+        if (any(isnan(field2Sample)) || any(isinf(field2Sample))) field2Sample = vec2(0.0);
+
+        vec2 field1TranslateBy = (field1Bias + field1Sample) * field1Multiplier;
+        vec2 field2TranslateBy = (field2Bias + field2Sample) * field2Multiplier;
         vec2 totalTranslation = translateBy + field1TranslateBy + field2TranslateBy;
 
         vec2 uv = texCoordVarying;
@@ -309,6 +315,7 @@ protected:
         vec2 uvSmearStrategic = applyStrategy(uv, uvSmear, totalTranslation);
 
         vec4 smearColor = texture(tex0, uvSmearStrategic);
+        if (any(isnan(smearColor)) || any(isinf(smearColor))) smearColor = vec4(0.0);
 
         // Dual-sample ghosting (strategy 8): sample a permuted cell when crossing borders
         if (strategy == 8){
@@ -327,10 +334,22 @@ protected:
           float gb = clamp(ghostBlend, 0.0, 1.0);
           smearColor = mix(smearColor, ghostColor, gb * w);
         }
+        if (any(isnan(smearColor)) || any(isinf(smearColor))) smearColor = vec4(0.0);
 
         vec4 existingColor = texture(tex0, uv);
-        vec4 color = mix(existingColor, smearColor, mixNew);
-        color.a *= fadeMultiplier;
+        if (any(isnan(existingColor)) || any(isinf(existingColor))) existingColor = vec4(0.0);
+
+        // Option A: never let "empty" history erase existing pixels.
+        // Gate the history mix weight by smear alpha (premultiplied-alpha friendly).
+        float historyPresence = clamp(smearColor.a * 4.0, 0.0, 1.0);
+        float w = clamp(mixNew, 0.0, 1.0) * historyPresence;
+        vec4 color = mix(existingColor, smearColor, w);
+        if (any(isnan(color)) || any(isinf(color))) color = vec4(0.0);
+
+        // Keep premultiplied alpha consistent: fade scales both RGB and A.
+        float fm = clamp(fadeMultiplier, 0.0, 1.0);
+        color *= fm;
+
         fragColor = color;
       }
     );
