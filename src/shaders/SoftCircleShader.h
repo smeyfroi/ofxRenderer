@@ -77,15 +77,16 @@ protected:
                                      + 0.25 * sin(edgeFreq.z * theta + edgePhase * 2.3);
                   edgeSignal *= (1.0 / 1.75);
 
-                  float edgeShaped = sign(edgeSignal) * pow(abs(edgeSignal), max(edgeSharpness, 0.001));
-                  float boundary = 1.0 + edgeAmount * edgeShaped;
-                  boundary = clamp(boundary, 0.2, 2.0);
+                   float edgeShaped = sign(edgeSignal) * pow(abs(edgeSignal), max(edgeSharpness, 0.001));
+                   float boundary = 1.0 + edgeAmount * edgeShaped;
+                   boundary = clamp(boundary, 0.2, 2.0);
 
-                  float nd = normalizedDist / boundary;
-                  if (nd > 1.0) discard;
+                   float nd = normalizedDist / boundary;
+                   if (nd > 1.0) discard;
 
-                  // Softness is edge width in normalized circle space.
-                  // Use derivatives so Softness=0 is still anti-aliased.
+                   // Softness is edge width in normalized circle space.
+                   // Use derivatives so Softness=0 is still anti-aliased.
+
                   float aa = fwidth(nd) * 1.5;
                   float edgeWidth = max(fadeWidth, aa);
                   edgeWidth = clamp(edgeWidth, 0.0005, 1.0);
@@ -96,19 +97,24 @@ protected:
                   float dabAlpha = 1.0 - (nd * nd);
                   dabAlpha = max(dabAlpha, 0.0);
 
-                  if (falloff == 1) {
-                    // Dab: quadratic falloff for broader, softer marks
-                    // Uses premultiplied alpha to avoid halo artifacts when marks overlap
-                    // Requires GL_ONE, GL_ONE_MINUS_SRC_ALPHA blend func
-                    float a = dabAlpha * color.a;
-                    fragColor = vec4(color.rgb * a, a);
-                  } else {
-                    // Glow: edge-controlled falloff (Softness)
-                    // Blend toward dabAlpha when Softness is low to avoid a harsh, flat interior.
-                    float t = smoothstep(0.25, 0.5, fadeWidth);
-                    float alpha = mix(dabAlpha, edgeAlpha, t);
-                    fragColor = vec4(color.rgb, color.a * alpha);
-                  }
+                   if (falloff == 1) {
+                     // Dab: quadratic falloff for broader, softer marks
+                     // Uses premultiplied alpha to avoid halo artifacts when marks overlap
+                     // Requires GL_ONE, GL_ONE_MINUS_SRC_ALPHA blend func
+                     float a = dabAlpha * color.a;
+                     fragColor = vec4(color.rgb * a, a);
+                   } else {
+                     // Glow: edge-controlled falloff (Softness)
+                     // Uses premultiplied alpha so scaling/filtering doesn't create halos on either
+                     // light or dark backgrounds.
+                     // Requires GL_ONE, GL_ONE_MINUS_SRC_ALPHA blend func.
+                     float t = smoothstep(0.25, 0.5, fadeWidth);
+                     float alpha = mix(dabAlpha, edgeAlpha, t);
+                     float a = color.a * alpha;
+                     fragColor = vec4(color.rgb * a, a);
+                   }
+
+
                 }
                 );
   }
