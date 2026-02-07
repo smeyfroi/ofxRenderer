@@ -7,9 +7,12 @@
 
 #pragma once
 
+#include <cmath>
+#include <cstdint>
+
 #include "../Shader.h"
-#include "ofGraphics.h"
 #include "../UnitQuadMesh.h"
+#include "ofGraphics.h"
 
 class SoftCircleShader : public Shader {
 
@@ -46,6 +49,13 @@ public:
     shader.setUniform3f("edgeFreq", edgeFreq);
     shader.setUniform1f("edgeSharpness", edgeSharpness);
     shader.setUniform1f("edgePhase", edgePhase);
+
+    // Per-stamp seed avoids repeated edge patterns.
+    shader.setUniform1f("edgeSeed", hashSeed(center));
+
+    // Gentle drift keeps edges alive without buzzing.
+    shader.setUniform1f("timeSec", ofGetElapsedTimef());
+
     quadMesh.draw(center, size, angleRad);
     shader.end();
   }
@@ -63,31 +73,54 @@ protected:
                 uniform vec3 edgeFreq; // angular frequencies
                 uniform float edgeSharpness; // >1 = spikier
                 uniform float edgePhase;
+                uniform float edgeSeed; // per-stamp seed in [0,1)
+                uniform float timeSec; // time, for gentle drift
 
                 void main() {
                   vec2 center = vec2(0.5, 0.5);
-                  float dist = distance(texCoordVarying, center);
+                  vec2 d = texCoordVarying - center;
+                  float dist = length(d);
                   float normalizedDist = dist * 2.0;
 
-                  vec2 d = texCoordVarying - center;
                   float theta = atan(d.y, d.x);
 
-                  float edgeSignal = sin(edgeFreq.x * theta + edgePhase)
-                                     + 0.5 * sin(edgeFreq.y * theta + edgePhase * 1.7)
-                                     + 0.25 * sin(edgeFreq.z * theta + edgePhase * 2.3);
+                  // Apply edge modulation mostly near the boundary so the interior stays soft.
+                  float aaBase = fwidth(normalizedDist) * 1.5;
+                  float bandWidth = clamp(max(fadeWidth * 0.75, aaBase * 2.0), 0.002, 0.25);
+                  float edgeBand = smoothstep(1.0 - bandWidth, 1.0, normalizedDist);
+
+                  float TAU = 6.28318530718;
+                  float phase = edgePhase + edgeSeed * TAU;
+
+                  // Gentle drift: rotates the edge pattern over tens of seconds.
+                  phase += timeSec * 0.14;
+
+                  // Slight per-stamp frequency jitter reduces repetitiveness.
+                  float s1 = fract(edgeSeed * 17.0 + 0.1);
+                  float s2 = fract(edgeSeed * 37.0 + 0.2);
+                  float s3 = fract(edgeSeed * 73.0 + 0.3);
+                  vec3 freqJitter = vec3(s1, s2, s3) - 0.5;
+                  vec3 freq = edgeFreq * (1.0 + freqJitter * 0.18);
+
+                  float edgeSignal = sin(freq.x * theta + phase)
+                                     + 0.5 * sin(freq.y * theta + phase * 1.7 + edgeSeed * 2.0)
+                                     + 0.25 * sin(freq.z * theta + phase * 2.3 + edgeSeed * 4.0);
                   edgeSignal *= (1.0 / 1.75);
 
-                   float edgeShaped = sign(edgeSignal) * pow(abs(edgeSignal), max(edgeSharpness, 0.001));
-                   float boundary = 1.0 + edgeAmount * edgeShaped;
-                   boundary = clamp(boundary, 0.2, 2.0);
+                  float edgeShaped = sign(edgeSignal) * pow(abs(edgeSignal), max(edgeSharpness, 0.001));
+                  float boundary = 1.0 + edgeAmount * edgeShaped * edgeBand;
+                  boundary = clamp(boundary, 0.2, 2.0);
 
-                   float nd = normalizedDist / boundary;
-                   if (nd > 1.0) discard;
+                  float nd = normalizedDist / boundary;
 
                    // Softness is edge width in normalized circle space.
                    // Use derivatives so Softness=0 is still anti-aliased.
 
                   float aa = fwidth(nd) * 1.5;
+
+                  // Avoid harsh cutouts when the edge boundary is modulated.
+                  if (nd > 1.0 + aa) discard;
+
                   float edgeWidth = max(fadeWidth, aa);
                   edgeWidth = clamp(edgeWidth, 0.0005, 1.0);
 
@@ -120,5 +153,18 @@ protected:
   }
 
 private:
+  static float hashSeed(const glm::vec2& p) {
+    // Fast, stable hash for per-stamp variation.
+    // Uses integer mixing so nearby pixels don't correlate too strongly.
+    const std::uint32_t x = static_cast<std::uint32_t>(std::floor(p.x));
+    const std::uint32_t y = static_cast<std::uint32_t>(std::floor(p.y));
+
+    std::uint32_t h = x * 374761393u + y * 668265263u; // Large primes
+    h = (h ^ (h >> 13u)) * 1274126177u;
+    h ^= (h >> 16u);
+
+    return static_cast<float>(h & 0x00FFFFFFu) * (1.0f / 16777216.0f);
+  }
+
   UnitQuadMesh quadMesh;
 };
