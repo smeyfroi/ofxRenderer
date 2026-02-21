@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../PingPongFbo.h"
-#include "../Shader.h"
+#include "PingPongFbo.h"
+#include "Shader.h"
 #include "ofGraphics.h"
 
 class ApplyTemperatureBuoyancyShader : public Shader {

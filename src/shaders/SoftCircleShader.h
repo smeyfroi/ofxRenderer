@@ -10,8 +10,8 @@
 #include <cmath>
 #include <cstdint>
 
-#include "../Shader.h"
-#include "../UnitQuadMesh.h"
+#include "Shader.h"
+#include "UnitQuadMesh.h"
 #include "ofGraphics.h"
 
 class SoftCircleShader : public Shader {
